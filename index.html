@@ -6,7 +6,10 @@
   <title>H&P Portal</title>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script>
-    document.write('<link rel="stylesheet" href="style.css?v=' + new Date().getTime() + '">');
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'style.css?v=' + new Date().getTime();
+    document.head.appendChild(link);
   </script>
 </head>
 <body>
@@ -120,9 +123,3 @@
       <button onclick="hideModal('modal-manual')" style="background:none; border:none; color:#8e8e93; margin-top:20px; font-weight:700; cursor:pointer;">Cancelar</button>
     </div>
   </div>
-
-  <script>
-    document.write('<script src="app.js?v=' + new Date().getTime() + '"><\\/script>');
-  </script>
-</body>
-</html>
