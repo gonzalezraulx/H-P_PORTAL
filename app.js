@@ -1,5 +1,5 @@
 /**
- * H&P PORTAL — LOGIC FINAL (ESTABLE + BARRAS)
+ * H&P PORTAL — LOGIC FINAL (QUAGGA OPTIMIZADO)
  */
 
 const scriptUrl = "https://script.google.com/macros/s/AKfycbygZTPGk7-e6q_y1dCFde0dJst0BUxB6ficJNj2B8sgyzUe2lwrSTRZAGqD7-m-DzHTzg/exec";
@@ -9,11 +9,24 @@ const TIENDAS_POR_MARCA = {
   "Papas": ["Neo", "Rosarito"]
 };
 
-localStorage.removeItem('h_user_name'); // FORZAR RESET
+localStorage.removeItem('h_user_name');
 let state = { brand: '', mode: '', location: '', user: '', sessionCount: 0 };
-let pedidoItems = []; let scanner = null;
+let pedidoItems = [];
+let quaggaActive = false;
+let lastScanTime = 0;
+let detectedHandler = null;
 
-function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function showScreen(id) { 
+  // Detener Quagga al cambiar pantalla
+  if (quaggaActive) {
+    Quagga.stop();
+    Quagga.offDetected();
+    quaggaActive = false;
+  }
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); 
+  document.getElementById(id).classList.add('active'); 
+}
+
 function showModal(id) { document.getElementById(id).style.display = 'flex'; }
 function hideModal(id) { document.getElementById(id).style.display = 'none'; }
 
@@ -54,71 +67,168 @@ function selectBrand(b) {
   b.classList.add('active'); 
   const menu = document.getElementById('dropdown-menu');
   menu.innerHTML = TIENDAS_POR_MARCA[state.brand].map(t => `<button class="drop-option" onclick="selectLocation('${t}')">${t}</button>`).join('');
-  state.location = ''; document.getElementById('dropdown-label').textContent = "Seleccionar..."; checkReady(); 
+  state.location = ''; 
+  document.getElementById('dropdown-label').textContent = "Seleccionar..."; 
+  checkReady(); 
 }
 
-function selectMode(b) { state.mode = b.dataset.mode; document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); checkReady(); }
-function toggleDropdown() { if(state.brand) document.getElementById('dropdown-menu').classList.toggle('show'); }
-function selectLocation(l) { state.location = l; document.getElementById('dropdown-label').textContent = l; document.getElementById('dropdown-menu').classList.remove('show'); checkReady(); }
-function checkReady() { document.getElementById('btn-start').disabled = !(state.brand && state.mode && state.location); }
+function selectMode(b) { 
+  state.mode = b.dataset.mode; 
+  document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active')); 
+  b.classList.add('active'); 
+  checkReady(); 
+}
 
-function handleStart() { if (state.mode === 'inventario') startInventario(); else startPedido(); }
+function toggleDropdown() { 
+  if(state.brand) document.getElementById('dropdown-menu').classList.toggle('show'); 
+}
 
-let lastScanTime = 0;
+function selectLocation(l) { 
+  state.location = l; 
+  document.getElementById('dropdown-label').textContent = l; 
+  document.getElementById('dropdown-menu').classList.remove('show'); 
+  checkReady(); 
+}
+
+function checkReady() { 
+  document.getElementById('btn-start').disabled = !(state.brand && state.mode && state.location); 
+}
+
+function handleStart() { 
+  if (state.mode === 'inventario') startInventario(); 
+  else startPedido(); 
+}
 
 function initQuagga(targetId, callback) {
-  Quagga.init({
+  // Limpiar instancia anterior
+  if (quaggaActive) {
+    Quagga.stop();
+    Quagga.offDetected();
+  }
+
+  const config = {
     inputStream: {
       name: "Live",
       type: "LiveStream",
       target: document.querySelector('#' + targetId),
-      constraints: { facingMode: "environment" }
+      constraints: {
+        facingMode: "environment",
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
     },
+    locator: {
+      patchSize: "medium",
+      halfSample: true
+    },
+    numOfWorkers: navigator.hardwareConcurrency ? Math.max(1, navigator.hardwareConcurrency - 1) : 4,
+    frequency: 10,
     decoder: {
-      readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader", "upc_reader"]
+      readers: [
+        "code_128_reader",
+        "code_39_reader",
+        "code_39_vin_reader",
+        "codabar_reader",
+        "ean_reader",
+        "ean_8_reader",
+        "upc_reader",
+        "upc_e_reader",
+        "i2of5_reader"
+      ],
+      debug: {
+        showCanvas: false,
+        showPatternMessages: false,
+        showFoundPatterns: false,
+        showRejected: false
+      }
     }
-  }, function(err) {
-      if (err) { alert("Error de cámara: " + err); return; }
-      Quagga.start();
-  });
+  };
 
-  Quagga.onDetected(function(result) {
-    const code = result.codeResult.code;
-    const now = Date.now();
-    // Prevenir lecturas múltiples del mismo código muy rápido
-    if (now - lastScanTime > 2000) {
-      lastScanTime = now;
-      callback(code);
+  Quagga.init(config, function(err) {
+    if (err) {
+      console.error("Quagga init error:", err);
+      alert("Error de cámara: " + err.message);
+      return;
     }
+    
+    Quagga.start();
+    quaggaActive = true;
+    
+    // Remover handler anterior si existe
+    if (detectedHandler) {
+      Quagga.offDetected(detectedHandler);
+    }
+    
+    // Asignar nuevo handler
+    detectedHandler = function(result) {
+      if (result.codeResult && result.codeResult.code) {
+        const code = result.codeResult.code;
+        const now = Date.now();
+        
+        // Prevenir duplicados (2 segundos de cooldown)
+        if (now - lastScanTime > 2000) {
+          lastScanTime = now;
+          if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+          callback(code);
+        }
+      }
+    };
+    
+    Quagga.onDetected(detectedHandler);
   });
 }
 
 function startInventario() {
-  document.getElementById('meta-loc').textContent = state.location; showScreen('screen-scanner');
-  initQuagga("qr-reader", (code) => {
-    if (navigator.vibrate) navigator.vibrate(100);
-    state.sessionCount++; document.getElementById('counter-num').textContent = state.sessionCount;
-    document.getElementById('lsb-name').textContent = "Escaneado: " + code;
-    fetch(scriptUrl, { method: 'POST', body: JSON.stringify({ tipo: 'inventario', marca: state.brand, usuario: state.user, ubicacion: state.location, codigo: code, fecha: new Date().toLocaleDateString(), hora: new Date().toLocaleTimeString() }), mode: 'no-cors' });
-  });
+  document.getElementById('meta-loc').textContent = state.location;
+  showScreen('screen-scanner');
+  
+  setTimeout(() => {
+    initQuagga("qr-reader", (code) => {
+      state.sessionCount++;
+      document.getElementById('counter-num').textContent = state.sessionCount;
+      document.getElementById('lsb-name').textContent = "Escaneado: " + code;
+      document.getElementById('lsb-code').textContent = code;
+      
+      fetch(scriptUrl, {
+        method: 'POST',
+        body: JSON.stringify({
+          tipo: 'inventario',
+          marca: state.brand,
+          usuario: state.user,
+          ubicacion: state.location,
+          codigo: code,
+          fecha: new Date().toLocaleDateString(),
+          hora: new Date().toLocaleTimeString()
+        }),
+        mode: 'no-cors'
+      });
+    });
+  }, 100);
 }
 
 async function startPedido() {
-  document.getElementById('pedido-title').textContent = state.location; showScreen('screen-pedido');
+  document.getElementById('pedido-title').textContent = state.location;
+  showScreen('screen-pedido');
   try {
     const params = `action=getPedido&marca=${encodeURIComponent(state.brand)}&destino=${encodeURIComponent(state.location)}`;
     const res = await fetch(`${scriptUrl}?${params}`);
     const data = await res.json();
-    if(data.ok) { pedidoItems = data.items; renderPedidoList(); }
-  } catch(e) { alert("Error al cargar lista: " + e.message); }
+    if(data.ok) {
+      pedidoItems = data.items;
+      renderPedidoList();
+    }
+  } catch(e) {
+    alert("Error al cargar lista: " + e.message);
+  }
 }
 
 function renderPedidoList() {
-  const list = document.getElementById('pedido-list'); 
-  const total = pedidoItems.reduce((acc, i) => acc + i.pedida, 0); 
+  const list = document.getElementById('pedido-list');
+  const total = pedidoItems.reduce((acc, i) => acc + i.pedida, 0);
   const done = pedidoItems.reduce((acc, i) => acc + i.confirmada, 0);
   const prog = document.getElementById('pedido-progress-fill');
   if (total > 0) prog.style.width = (done/total*100) + '%';
+  
   list.innerHTML = pedidoItems.map(item => `
     <div class="pedido-card ${item.confirmada >= item.pedida ? 'complete' : ''}">
       <div>
@@ -130,11 +240,20 @@ function renderPedidoList() {
 }
 
 function processScan(code) {
-  if (navigator.vibrate) navigator.vibrate(100);
   const item = pedidoItems.find(i => i.codigo == code);
   if (item && item.confirmada < item.pedida) {
-    item.confirmada++; renderPedidoList();
-    fetch(scriptUrl, { method: 'POST', body: JSON.stringify({ tipo: 'pedido', marca: state.brand, location: state.location, rowIndex: item.rowIndex }), mode: 'no-cors' });
+    item.confirmada++;
+    renderPedidoList();
+    fetch(scriptUrl, {
+      method: 'POST',
+      body: JSON.stringify({
+        tipo: 'pedido',
+        marca: state.brand,
+        location: state.location,
+        rowIndex: item.rowIndex
+      }),
+      mode: 'no-cors'
+    });
     document.getElementById('pedido-scan-result').style.color = "#34c759";
     document.getElementById('pedido-scan-result').textContent = "✓ " + item.descripcion;
   } else {
@@ -145,25 +264,55 @@ function processScan(code) {
 
 function openPedidoScanner() {
   document.getElementById('pedido-scanner-overlay').style.display = 'block';
-  initQuagga("qr-reader-pedido", processScan);
+  
+  setTimeout(() => {
+    initQuagga("qr-reader-pedido", processScan);
+  }, 100);
 }
 
-function closePedidoScanner() { 
-  Quagga.stop(); 
-  Quagga.offDetected();
-  document.getElementById('pedido-scanner-overlay').style.display = 'none'; 
+function closePedidoScanner() {
+  if (quaggaActive) {
+    Quagga.stop();
+    Quagga.offDetected();
+    quaggaActive = false;
+  }
+  document.getElementById('pedido-scanner-overlay').style.display = 'none';
 }
-function endSession() { location.reload(); }
+
+function endSession() {
+  if (quaggaActive) {
+    Quagga.stop();
+    Quagga.offDetected();
+  }
+  location.reload();
+}
 
 function submitManual() {
-  const code = document.getElementById('manual-code').value; if(!code) return;
+  const code = document.getElementById('manual-code').value;
+  if(!code) return;
+  
   if (document.getElementById('screen-pedido').classList.contains('active')) {
-    processScan(code); hideModal('modal-manual');
+    processScan(code);
+    hideModal('modal-manual');
   } else {
-    state.sessionCount++; document.getElementById('counter-num').textContent = state.sessionCount;
-    fetch(scriptUrl, { method: 'POST', body: JSON.stringify({ tipo: 'inventario', marca: state.brand, usuario: state.user, ubicacion: state.location, codigo: code, fecha: new Date().toLocaleDateString(), hora: new Date().toLocaleTimeString() }), mode: 'no-cors' });
+    state.sessionCount++;
+    document.getElementById('counter-num').textContent = state.sessionCount;
+    fetch(scriptUrl, {
+      method: 'POST',
+      body: JSON.stringify({
+        tipo: 'inventario',
+        marca: state.brand,
+        usuario: state.user,
+        ubicacion: state.location,
+        codigo: code,
+        fecha: new Date().toLocaleDateString(),
+        hora: new Date().toLocaleTimeString()
+      }),
+      mode: 'no-cors'
+    });
     hideModal('modal-manual');
   }
+  document.getElementById('manual-code').value = '';
 }
 
 checkAuth();
