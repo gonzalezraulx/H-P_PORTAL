@@ -64,17 +64,38 @@ function checkReady() { document.getElementById('btn-start').disabled = !(state.
 
 function handleStart() { if (state.mode === 'inventario') startInventario(); else startPedido(); }
 
-const SCAN_CONFIG = { 
-  fps: 20, 
-  qrbox: { width: 350, height: 100 },
-  aspectRatio: 3.5,
-  disableFlip: false
-};
+let lastScanTime = 0;
+
+function initQuagga(targetId, callback) {
+  Quagga.init({
+    inputStream: {
+      name: "Live",
+      type: "LiveStream",
+      target: document.querySelector('#' + targetId),
+      constraints: { facingMode: "environment" }
+    },
+    decoder: {
+      readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader", "upc_reader"]
+    }
+  }, function(err) {
+      if (err) { alert("Error de cámara: " + err); return; }
+      Quagga.start();
+  });
+
+  Quagga.onDetected(function(result) {
+    const code = result.codeResult.code;
+    const now = Date.now();
+    // Prevenir lecturas múltiples del mismo código muy rápido
+    if (now - lastScanTime > 2000) {
+      lastScanTime = now;
+      callback(code);
+    }
+  });
+}
 
 function startInventario() {
   document.getElementById('meta-loc').textContent = state.location; showScreen('screen-scanner');
-  scanner = new Html5Qrcode("qr-reader");
-  scanner.start({ facingMode: "environment" }, SCAN_CONFIG, (code) => {
+  initQuagga("qr-reader", (code) => {
     if (navigator.vibrate) navigator.vibrate(100);
     state.sessionCount++; document.getElementById('counter-num').textContent = state.sessionCount;
     document.getElementById('lsb-name').textContent = "Escaneado: " + code;
@@ -124,13 +145,14 @@ function processScan(code) {
 
 function openPedidoScanner() {
   document.getElementById('pedido-scanner-overlay').style.display = 'block';
-  scanner = new Html5Qrcode("qr-reader-pedido");
-  scanner.start({ facingMode: "environment" }, SCAN_CONFIG, processScan).catch(err => {
-    alert("Error al abrir cámara: " + err);
-  });
+  initQuagga("qr-reader-pedido", processScan);
 }
 
-function closePedidoScanner() { if(scanner) scanner.stop(); document.getElementById('pedido-scanner-overlay').style.display = 'none'; }
+function closePedidoScanner() { 
+  Quagga.stop(); 
+  Quagga.offDetected();
+  document.getElementById('pedido-scanner-overlay').style.display = 'none'; 
+}
 function endSession() { location.reload(); }
 
 function submitManual() {
