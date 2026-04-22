@@ -9,7 +9,8 @@ const TIENDAS_POR_MARCA = {
   "Papas": ["Neo", "Rosarito"]
 };
 
-let state = { brand: '', mode: '', location: '', user: localStorage.getItem('h_user_name') || '', sessionCount: 0 };
+localStorage.removeItem('h_user_name'); // FORZAR RESET
+let state = { brand: '', mode: '', location: '', user: '', sessionCount: 0 };
 let pedidoItems = []; let scanner = null;
 
 function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
@@ -63,17 +64,11 @@ function checkReady() { document.getElementById('btn-start').disabled = !(state.
 
 function handleStart() { if (state.mode === 'inventario') startInventario(); else startPedido(); }
 
-// CONFIGURACIÓN ESTABLE DE LECTURA
 const SCAN_CONFIG = { 
-  fps: 15, 
-  qrbox: (vw, vh) => { return { width: vw * 0.8, height: vh * 0.4 }; },
-  formatsToSupport: [ 
-    Html5QrcodeSupportedFormats.QR_CODE, 
-    Html5QrcodeSupportedFormats.CODE_128, 
-    Html5QrcodeSupportedFormats.CODE_39, 
-    Html5QrcodeSupportedFormats.EAN_13,
-    Html5QrcodeSupportedFormats.UPC_A
-  ]
+  fps: 20, 
+  qrbox: { width: 350, height: 100 },
+  aspectRatio: 3.5,
+  disableFlip: false
 };
 
 function startInventario() {
