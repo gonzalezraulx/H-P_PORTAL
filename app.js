@@ -1,6 +1,6 @@
 /**
  * H&P PORTAL — LOGIC FINAL (FILTRO INVENTARIO + CANTIDADES)
- * VERIFICADO — REVISIÓN FINAL
+ * FIX: Mejor soporte de códigos de barras en móvil
  */
 
 const scriptUrl = "https://script.google.com/macros/s/AKfycbwz0e6lh0yzO7W66YACZQRc0OOTjOfjR03wWXQzO6J1L_PHyTJshbelEqkvRqUrYPLocA/exec";
@@ -120,8 +120,17 @@ function checkReady() { const b = document.getElementById('btn-start'); if(b) b.
 
 function handleStart() { if (state.mode === 'inventario') startInventario(); else startPedido(); }
 
+// ─── SCANNER MEJORADO PARA MÓVIL ──────────────────────────────────────────────
+// El problema: html5-qrcode en móvil usa resolución baja por defecto y el
+// qrbox muy pequeño corta el código de barras lineal. Solución:
+// 1. Forzar alta resolución (1280x720 mínimo, preferir 1920x1080)
+// 2. Ampliar el qrbox horizontalmente para códigos de barras lineales
+// 3. Usar facingMode: environment en vez de buscar por label (más compatible)
+// 4. Reducir el debounce de escaneo a 800ms para mayor respuesta
+
 async function initScanner(id, cb) {
   await stopScanner();
+
   const formats = [
     Html5QrcodeSupportedFormats.EAN_13,
     Html5QrcodeSupportedFormats.EAN_8,
@@ -131,48 +140,130 @@ async function initScanner(id, cb) {
     Html5QrcodeSupportedFormats.CODE_39,
     Html5QrcodeSupportedFormats.ITF,
     Html5QrcodeSupportedFormats.QR_CODE,
+    Html5QrcodeSupportedFormats.DATA_MATRIX,
+    Html5QrcodeSupportedFormats.CODABAR,
   ];
+
   html5QrScanner = new Html5Qrcode(id, { formatsToSupport: formats, verbose: false });
 
-  const config = { fps: 10, qrbox: (w, h) => ({ width: Math.floor(w * 0.85), height: Math.floor(h * 0.4) }) };
+  // ► Caja de escaneo RECTANGULAR: ancha para barras lineales
+  const config = {
+    fps: 15, // más fps = más intentos de decodificación por segundo
+    qrbox: (w, h) => ({
+      width: Math.floor(w * 0.92),       // casi todo el ancho
+      height: Math.floor(h * 0.30)       // franja horizontal angosta = ideal para barras
+    }),
+    // ► Alta resolución: crítico para leer barras finas en móvil
+    videoConstraints: {
+      facingMode: { exact: "environment" }, // cámara trasera directamente
+      width: { min: 640, ideal: 1920, max: 1920 },
+      height: { min: 480, ideal: 1080, max: 1080 },
+      // Enfocar automáticamente — sin esto muchos Android no enfocan
+      focusMode: "continuous",
+      advanced: [{ focusMode: "continuous" }]
+    },
+    experimentalFeatures: {
+      useBarCodeDetectorIfSupported: true  // ► Usa la BarcodeDetector API nativa del browser si está disponible (Chrome Android 83+) — mucho más rápida
+    },
+    rememberLastUsedCamera: false,
+    aspectRatio: 1.0
+  };
+
   const onScan = (txt) => {
     const now = Date.now();
-    if (now - lastScanTime > 1500) { lastScanTime = now; cb(txt); }
+    if (now - lastScanTime > 800) { lastScanTime = now; cb(txt); }
   };
 
   try {
-    const cameras = await Html5Qrcode.getCameras();
-    if (!cameras || cameras.length === 0) { alert("No se encontraron camaras"); return; }
-    // Buscar trasera por label, si no tomar la ultima (suele ser trasera)
-    const back = cameras.find(c => /back|rear|environment|trasera/i.test(c.label)) || cameras[cameras.length - 1];
-    await html5QrScanner.start(back.id, config, onScan, () => {});
+    await html5QrScanner.start(
+      { facingMode: "environment" }, // ◄ así es más compatible que buscar por ID
+      config,
+      onScan,
+      () => {} // onError silencioso
+    );
+
+    // ► Intentar activar el enfoque continuo en la pista de video activa
+    //   (mejora drásticamente la lectura de barras en Android)
+    setTimeout(() => activateContinuousFocus(), 1500);
+
   } catch (err) {
-    alert("Error al iniciar camara: " + err);
+    // Si "exact" environment falla, reintentamos sin exact
+    try {
+      await html5QrScanner.start(
+        { facingMode: "environment" },
+        { ...config, videoConstraints: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } },
+        onScan,
+        () => {}
+      );
+      setTimeout(() => activateContinuousFocus(), 1500);
+    } catch (err2) {
+      alert("Error al iniciar cámara: " + err2);
+    }
   }
 }
 
-// Nueva función para enfocar manualmente
-async function setManualFocus(distance) {
+// Activa enfoque continuo en la cámara activa — sin esto Android enfoca una sola vez
+async function activateContinuousFocus() {
   if (!html5QrScanner) return;
   try {
-    const stream = await html5QrScanner.getRunningTrackSettings();
-    if (stream && stream.focusDistance !== undefined) {
-      // Intentar establecer distancia de enfoque si el dispositivo lo soporta
-      const track = html5QrScanner.getRunningTrackSettings();
-      if (track) {
-        const constraints = { advanced: [{ focusDistance: distance }] };
-        // Esta es una operación experimental
-        console.log("Ajustando enfoque a:", distance);
+    const track = html5QrScanner.getRunningTrackCameraCapabilities
+      ? null // nueva API
+      : null;
+    
+    // Acceder al stream directo del video
+    const videoEl = document.querySelector('#qr-reader video, #qr-reader-pedido video');
+    if (videoEl && videoEl.srcObject) {
+      const tracks = videoEl.srcObject.getVideoTracks();
+      if (tracks.length > 0) {
+        const t = tracks[0];
+        const caps = t.getCapabilities ? t.getCapabilities() : {};
+        const constraints = {};
+
+        if (caps.focusMode && caps.focusMode.includes('continuous')) {
+          constraints.focusMode = 'continuous';
+        }
+        // Intentar máxima resolución si el dispositivo lo permite
+        if (caps.width && caps.width.max >= 1920) {
+          constraints.width = 1920;
+          constraints.height = 1080;
+        }
+
+        if (Object.keys(constraints).length > 0) {
+          await t.applyConstraints({ advanced: [constraints] });
+          console.log("✓ Enfoque continuo activado");
+        }
       }
     }
   } catch(e) {
-    console.log("Enfoque manual no soportado en este dispositivo");
+    console.log("Enfoque continuo no soportado:", e.message);
+  }
+}
+
+// Función de enfoque manual (botones Cerca/Normal/Lejos)
+async function setManualFocus(distance) {
+  try {
+    const videoEl = document.querySelector('#qr-reader video, #qr-reader-pedido video');
+    if (!videoEl || !videoEl.srcObject) return;
+    const tracks = videoEl.srcObject.getVideoTracks();
+    if (tracks.length === 0) return;
+    const t = tracks[0];
+    const caps = t.getCapabilities ? t.getCapabilities() : {};
+    if (caps.focusMode && caps.focusMode.includes('manual') && caps.focusDistance) {
+      const minD = caps.focusDistance.min;
+      const maxD = caps.focusDistance.max;
+      const d = minD + (maxD - minD) * distance; // 0=cerca, 1=lejos
+      await t.applyConstraints({ advanced: [{ focusMode: 'manual', focusDistance: d }] });
+    }
+  } catch(e) {
+    console.log("Enfoque manual no soportado");
   }
 }
 
 async function stopScanner() {
   if (html5QrScanner) { try { await html5QrScanner.stop(); html5QrScanner = null; } catch(e) {} }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function sendInventario(code, manualQty) {
   let qty = manualQty;
