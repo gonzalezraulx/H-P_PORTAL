@@ -186,7 +186,7 @@ function renderPedidoList() {
   const prg = document.getElementById('pedido-progress-fill');
   if (tot > 0 && prg) prg.style.width = (dn/tot*100) + '%';
   list.innerHTML = pedidoItems.map(item => `
-    <div class="pedido-card ${item.confirmada >= item.pedida ? 'complete' : ''}">
+    <div class="pedido-card ${(item.pedida > 0 && item.confirmada >= item.pedida) ? 'complete' : ''}">
       <div>
         <div style="font-weight:800; font-size:16px;">${item.descripcion}</div>
         <div style="color:#8e8e93; font-family:monospace; font-size:12px;">${item.codigo}</div>
