@@ -158,8 +158,26 @@ body {
 }
 .scanner-container-wrapper.success { border-color: var(--success) !important; }
 
-#qr-reader, #qr-reader-pedido { width: 100% !important; height: 100% !important; }
-#reader__dashboard, #reader__camera_selection, #reader button { display: none !important; }
+#qr-reader, #qr-reader-pedido { 
+  width: 100% !important; 
+  height: 100% !important; 
+}
+#reader__dashboard, #reader__camera_selection, #reader button { 
+  display: none !important; 
+}
+
+/* Mejorar visibilidad del área de escaneo */
+#qr-reader video {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+/* Punto de enfoque visual */
+.qr-reader__scan_region_highlight {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  border-width: 2px !important;
+}
 
 /* LISTA PEDIDOS */
 .pedido-list { display: flex; flex-direction: column; gap: 10px; }
