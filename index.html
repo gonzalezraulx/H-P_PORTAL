@@ -6,6 +6,8 @@
     <title>H&P Portal</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode/html5-qrcode.min.js"></script>
+    <!-- Librería alternativa para mejor soporte de códigos de barras -->
+    <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
     <style>
         .screen-content {
             max-width: 420px;
@@ -90,6 +92,12 @@
             <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:10px;">
                 <span class="section-label" style="margin:0;">Cantidad:</span>
                 <input type="number" id="scan-qty" value="1" min="1" style="width:60px; height:35px; border-radius:10px; border:1px solid #ddd; text-align:center; font-weight:800;">
+            </div>
+
+            <div style="display:flex; gap:8px; margin-bottom:10px; justify-content:center;">
+                <button onclick="setManualFocus(0.1)" class="nav-btn btn-sec" style="padding:8px 12px; font-size:12px; flex:1;">📏 Cerca</button>
+                <button onclick="setManualFocus(0.5)" class="nav-btn btn-sec" style="padding:8px 12px; font-size:12px; flex:1;">🎯 Normal</button>
+                <button onclick="setManualFocus(1.0)" class="nav-btn btn-sec" style="padding:8px 12px; font-size:12px; flex:1;">🔭 Lejos</button>
             </div>
 
             <div id="last-scan-box" style="background:white; padding:24px; border-radius:28px; margin-bottom:120px;">
