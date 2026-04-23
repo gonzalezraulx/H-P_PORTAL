@@ -19,45 +19,74 @@ body {
   color: var(--text); 
   font-family: var(--font); 
   height: 100vh; 
-  overflow: hidden;
+  width: 100vw;
+  overflow: hidden; /* Evitar scroll global */
   letter-spacing: -0.02em;
 }
 
-.screen { position: fixed; inset: 0; display: none; padding: 20px 24px; overflow-y: auto; }
-.screen.active { display: block; animation: slideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
-
-@keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
-
-.setup-wrap { max-width: 420px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
-
-/* AUTH LOGO */
-.auth-logo { font-size: 28px; font-weight: 900; margin-bottom: 25px; text-align: center; }
-
-/* USER INFO */
-.user-card { 
-  display: flex; justify-content: space-between; align-items: center; 
-  padding: 5px 0; margin-bottom: 0px;
+/* PANTALLAS: Ahora son contenedores totales */
+.screen { 
+  position: fixed; 
+  top: 0; 
+  left: 0; 
+  width: 100%; 
+  height: 100%; 
+  background: var(--bg); /* Fondo sólido para que no se trasluzca lo de abajo */
+  display: none; 
+  padding: 20px 24px; 
+  overflow-y: auto;
+  z-index: 100;
 }
-.user-name { font-size: 24px; font-weight: 800; }
 
-/* SECTIONS */
-.section-label { font-size: 13px; font-weight: 700; color: var(--text-dim); margin-bottom: 12px; display: block; }
+.screen.active { 
+  display: block !important; 
+  animation: slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); 
+}
 
-/* BOTONES DE SELECCIÓN (Centrados y Grandes) */
+@keyframes slideUp { 
+  from { opacity: 0; transform: translateY(20px); } 
+  to { opacity: 1; transform: translateY(0); } 
+}
+
+.setup-wrap { 
+  max-width: 420px; 
+  margin: 0 auto; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 20px; 
+  padding-bottom: 120px; /* Espacio para que el footer no tape el contenido */
+}
+
+/* LOGO LOGIN */
+.auth-logo { font-size: 28px; font-weight: 900; margin: 40px 0; text-align: center; color: #000; }
+
+/* HEADER USUARIO */
+.user-card { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  padding: 10px 0;
+  margin-bottom: 5px;
+}
+.user-name { font-size: 22px; font-weight: 800; line-height: 1.2; }
+
+/* SECCIONES */
+.section-label { font-size: 13px; font-weight: 700; color: var(--text-dim); margin-bottom: 10px; display: block; }
+
+/* BOTONES DE SELECCIÓN */
 .selector-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .btn-select { 
-  height: 140px; background: var(--card); border: none; 
-  border-radius: 28px; color: #fff; font-family: inherit; 
-  font-weight: 900; cursor: pointer; transition: 0.3s;
+  height: 120px; background: var(--card); border: none; 
+  border-radius: 24px; color: #fff; font-family: inherit; 
+  font-weight: 800; cursor: pointer; transition: 0.2s;
   display: flex; flex-direction: column; align-items: center; 
   justify-content: center; text-align: center; padding: 15px; 
-  box-shadow: 0 8px 16px rgba(0,0,0,0.04);
-  font-size: 22px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  font-size: 18px;
 }
-.btn-select span { font-size: 44px; margin-bottom: 8px; }
-.btn-select.active { transform: scale(0.95); box-shadow: 0 5px 10px rgba(0,0,0,0.1); border: 3px solid #000; }
+.btn-select span { font-size: 36px; margin-bottom: 5px; }
+.btn-select.active { transform: scale(0.95); border: 3px solid #000; box-shadow: none; }
 
-/* Colores específicos para botones */
 .brand-btn[data-brand="Huss"] { background: var(--primary); }
 .brand-btn[data-brand="Papas"] { background: var(--tertiary); }
 .mode-btn[data-mode="inventario"] { background: var(--secondary); color: #000; }
@@ -72,62 +101,73 @@ body {
   box-shadow: 0 4px 10px rgba(0,0,0,0.02);
 }
 .drop-list { 
-  position: absolute; bottom: 110%; left: 0; right: 0; background: var(--card); 
+  position: absolute; bottom: 100%; left: 0; right: 0; background: var(--card); 
   border-radius: 20px; display: none; flex-direction: column; 
-  z-index: 100; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+  z-index: 200; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  margin-bottom: 10px;
 }
 .drop-list.show { display: flex; }
 .drop-option { padding: 18px; background: none; border: none; font-family: inherit; font-weight: 600; text-align: left; border-bottom: 1px solid #f2f2f7; }
 
-/* BOTÓN PRINCIPAL */
+/* BOTONES PRINCIPALES */
 .btn-main { 
-  width: 100%; padding: 20px; background: #000; color: #fff; 
+  width: 100%; padding: 18px; background: #000; color: #fff; 
   border: none; font-weight: 800; font-family: inherit; font-size: 15px; 
-  border-radius: 28px; cursor: pointer; transition: 0.3s;
+  border-radius: 24px; cursor: pointer; transition: 0.2s;
 }
 .btn-main:disabled { background: #e5e5ea; color: #aeaeb2; cursor: not-allowed; }
 
-/* SCANNER UI */
-.scan-hero { background: #fff; padding: 30px; border-radius: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-.scan-val { font-size: 64px; font-weight: 900; }
+/* FOOTER NAV: Ahora es relativo al contenedor pero fijo abajo */
+.footer-nav { 
+  position: fixed; 
+  bottom: 25px; 
+  left: 20px; 
+  right: 20px; 
+  display: flex; 
+  gap: 12px; 
+  z-index: 1000; /* Asegurar que esté sobre todo el contenido de la pantalla active */
+}
+/* Importante: El footer nav solo debe ser visible si su pantalla padre es activa */
+.screen:not(.active) .footer-nav { 
+  display: none !important; 
+}
 
-.footer-nav { position: fixed; bottom: 40px; left: 24px; right: 24px; display: flex; gap: 15px; }
-.nav-btn { flex: 1; padding: 20px; border-radius: 24px; border: none; font-weight: 700; cursor: pointer; }
+.nav-btn { flex: 1; padding: 18px; border-radius: 20px; border: none; font-weight: 700; cursor: pointer; font-size: 14px; }
 .btn-red { background: #ff3b30; color: #fff; }
 .btn-sec { background: #e5e5ea; color: #000; }
 
-/* AUTH */
+/* AUTH INPUTS */
 .auth-input { 
-  width: 100%; background: #fff; border: 1px solid #e5e5ea; 
-  padding: 20px; border-radius: 20px; font-family: inherit; font-size: 16px; margin-bottom: 15px;
-  outline: none; transition: 0.3s;
+  width: 100%; background: #f2f2f7; border: 1px solid transparent; 
+  padding: 18px; border-radius: 18px; font-family: inherit; font-size: 16px; margin-bottom: 12px;
+  outline: none; transition: 0.2s;
 }
-.auth-input:focus { border-color: #007aff; }
+.auth-input:focus { border-color: #007aff; background: #fff; }
 
-/* LISTA DE PEDIDOS */
-.pedido-list { display: flex; flex-direction: column; gap: 12px; padding-bottom: 100px; }
-.pedido-card { background: white; padding: 20px; border-radius: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: center; border: 2px solid transparent; }
-.pedido-card.complete { border-color: #34c759; }
-
-/* FEEDBACK WRAPPERS */
+/* SCANNER WRAPPER */
 .scanner-container-wrapper {
   position: relative;
   width: 100%;
+  aspect-ratio: 1; /* Cuadrado */
   border-radius: 24px;
   border: 4px solid transparent;
   overflow: hidden;
-  margin-bottom: 20px;
-  transition: border-color 0.2s ease-in-out;
-}
-.scanner-container-wrapper.success {
-  border-color: var(--success) !important;
-}
-
-/* html5-qrcode UI Hide */
-#reader__dashboard, #reader button, #reader__camera_selection {
-  display: none !important;
-}
-#qr-reader, #qr-reader-pedido {
+  margin-bottom: 15px;
+  transition: border-color 0.2s;
   background: #000;
-  width: 100%;
+}
+.scanner-container-wrapper.success { border-color: var(--success) !important; }
+
+#qr-reader, #qr-reader-pedido { width: 100% !important; height: 100% !important; }
+#reader__dashboard, #reader__camera_selection, #reader button { display: none !important; }
+
+/* LISTA PEDIDOS */
+.pedido-list { display: flex; flex-direction: column; gap: 10px; }
+.pedido-card { background: white; padding: 18px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: center; border: 2px solid transparent; }
+.pedido-card.complete { border-color: #34c759; }
+
+/* OVERLAYS ESPECIFICOS */
+#pedido-scanner-overlay {
+    background: #000 !important;
+    z-index: 5000 !important;
 }
