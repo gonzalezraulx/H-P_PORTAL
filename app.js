@@ -138,8 +138,7 @@ async function initScanner(id, cb) {
       "environment",
       { 
         fps: 10,
-        qrbox: (w, h) => ({ width: Math.floor(w * 0.9), height: Math.floor(h * 0.35) }),
-        aspectRatio: 1.7778,
+        qrbox: (w, h) => ({ width: Math.floor(w * 0.85), height: Math.floor(h * 0.4) }),
         disableFlip: false
       }, 
       (txt) => {
