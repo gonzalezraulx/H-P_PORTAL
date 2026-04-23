@@ -1,5 +1,6 @@
 /**
  * H&P PORTAL — LOGIC FINAL (FILTRO INVENTARIO + CANTIDADES)
+ * VERIFICADO — REVISIÓN FINAL
  */
 
 const scriptUrl = "https://script.google.com/macros/s/AKfycbwz0e6lh0yzO7W66YACZQRc0OOTjOfjR03wWXQzO6J1L_PHyTJshbelEqkvRqUrYPLocA/exec";
@@ -81,7 +82,7 @@ async function handleAuth(e) {
       alert("Error Google: " + (data.error || "Datos incorrectos")); 
     }
   } catch(error) { 
-    alert("FALLA TÉCNICA: " + error.message); 
+    alert("FALLA TÉCNICA"); 
   } finally {
     btn.textContent = "Acceder"; btn.disabled = false;
   }
@@ -134,7 +135,7 @@ async function initScanner(id, cb) {
         }
       }
     );
-  } catch (err) { alert("Error cámara: " + err); }
+  } catch (err) { alert("Error cámara"); }
 }
 
 async function stopScanner() {
@@ -142,13 +143,11 @@ async function stopScanner() {
 }
 
 async function sendInventario(code, manualQty) {
-  // Tomar cantidad del input de escaneo o del parámetro manual
   let qty = manualQty;
   if (!qty) {
     const qtyInput = document.getElementById('scan-qty');
     qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
   }
-
   try {
     const res = await fetch(scriptUrl, {
       method: 'POST',
@@ -163,7 +162,6 @@ async function sendInventario(code, manualQty) {
         hora: new Date().toLocaleTimeString() 
       })
     });
-    if (!res.ok) throw new Error("Servidor Google no responde");
     const data = await res.json();
     if (data.ok) {
         state.sessionCount += qty; 
@@ -178,7 +176,7 @@ async function sendInventario(code, manualQty) {
         document.getElementById('lsb-code').textContent = code;
         if (navigator.vibrate) navigator.vibrate([100,50,100]);
     }
-  } catch(e) { alert("ERROR DE CONEXIÓN: " + e.message); }
+  } catch(e) { alert("ERROR DE CONEXIÓN"); }
 }
 
 function startInventario() {
@@ -194,7 +192,7 @@ async function startPedido() {
     const res = await fetch(`${scriptUrl}?action=getPedido&marca=${encodeURIComponent(state.brand)}&destino=${encodeURIComponent(state.location)}`);
     const data = await res.json();
     if(data.ok) { pedidoItems = data.items; renderPedidoList(); }
-  } catch(e) { alert("ERROR DE CARGA: " + e.message); }
+  } catch(e) { alert("ERROR DE CARGA"); }
 }
 
 function renderPedidoList() {
@@ -238,15 +236,12 @@ function submitManual() {
   const qtyEl = document.getElementById('manual-qty');
   const code = codeEl ? codeEl.value.trim() : ""; 
   const qty = qtyEl ? parseInt(qtyEl.value) || 1 : 1;
-  
   if(!code) return;
-  
   if (document.getElementById('screen-pedido').classList.contains('active') || document.getElementById('pedido-scanner-overlay').classList.contains('active')) {
     processScan(code); 
   } else {
     sendInventario(code, qty);
   }
-  
   if(codeEl) codeEl.value = ""; 
   if(qtyEl) qtyEl.value = "1";
   hideModal('modal-manual');
