@@ -2,7 +2,7 @@
  * H&P PORTAL — LOGIC FINAL (ESTABLE + DIAGNÓSTICO)
  */
 
-const scriptUrl = "https://script.google.com/macros/s/AKfycbzhprNW-NL4wNVyG5fO67ZlV_PB4yn1ACWs4QGN4M-bi3vxQ3rTtjyK3I67BcEzP0NX7Q/exec";
+const scriptUrl = "https://script.google.com/macros/s/AKfycbyPSluepg_judge84oXkH6nVybjJUMkmFZoX5gSJMEETOq2Vg_RqgX3QeMN4wrjrBTsjQ/exec";
 
 const TIENDAS_POR_MARCA = {
   "Huss": ["Huss 1", "Huss 2"],
