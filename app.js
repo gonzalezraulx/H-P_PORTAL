@@ -134,28 +134,20 @@ async function initScanner(id, cb) {
   ];
   html5QrScanner = new Html5Qrcode(id, { formatsToSupport: formats, verbose: false });
 
-  // Intentar cámara trasera, si falla usar cualquier cámara disponible
-  const startWithCamera = async (cameraConfig) => {
-    await html5QrScanner.start(
-      cameraConfig,
-      { fps: 10, qrbox: (w, h) => ({ width: Math.floor(w * 0.85), height: Math.floor(h * 0.4) }) },
-      (txt) => {
-        const now = Date.now();
-        if (now - lastScanTime > 1500) { lastScanTime = now; cb(txt); }
-      },
-      () => {}
-    );
+  const config = { fps: 10, qrbox: (w, h) => ({ width: Math.floor(w * 0.85), height: Math.floor(h * 0.4) }) };
+  const onScan = (txt) => {
+    const now = Date.now();
+    if (now - lastScanTime > 1500) { lastScanTime = now; cb(txt); }
   };
 
   try {
-    await startWithCamera({ facingMode: "environment" });
-  } catch (err1) {
-    try {
-      // Fallback: dejar que el navegador elija la cámara
-      await startWithCamera({});
-    } catch (err2) {
-      alert("Error al iniciar cámara: " + err2);
-    }
+    const cameras = await Html5Qrcode.getCameras();
+    if (!cameras || cameras.length === 0) { alert("No se encontraron camaras"); return; }
+    // Buscar trasera por label, si no tomar la ultima (suele ser trasera)
+    const back = cameras.find(c => /back|rear|environment|trasera/i.test(c.label)) || cameras[cameras.length - 1];
+    await html5QrScanner.start(back.id, config, onScan, () => {});
+  } catch (err) {
+    alert("Error al iniciar camara: " + err);
   }
 }
 
