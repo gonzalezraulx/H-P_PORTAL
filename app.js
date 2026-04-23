@@ -74,8 +74,8 @@ function checkAuth() {
 
 async function handleAuth(e) {
   e.preventDefault();
-  const u = document.getElementById('auth-user').value;
-  const p = document.getElementById('auth-pass').value;
+  const u = document.getElementById('auth-user').value.trim();
+  const p = document.getElementById('auth-pass').value.trim();
   const btn = e.target.querySelector('button');
   const originalText = btn.textContent;
   
