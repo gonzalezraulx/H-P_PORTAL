@@ -138,15 +138,9 @@ async function initScanner(id, cb) {
       "environment",
       { 
         fps: 10,
-        // Caja rectangular horizontal — ideal para códigos de barras lineales
         qrbox: (w, h) => ({ width: Math.floor(w * 0.9), height: Math.floor(h * 0.35) }),
-        aspectRatio: 1.7778, // 16:9 fuerza mayor resolución en móvil
-        disableFlip: false,
-        videoConstraints: {
-          facingMode: "environment",
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        }
+        aspectRatio: 1.7778,
+        disableFlip: false
       }, 
       (txt) => {
         const now = Date.now();
