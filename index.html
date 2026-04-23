@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>H&P Portal</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Librería del Escáner (Indispensable) -->
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode/html5-qrcode.min.js"></script>
 </head>
 <body>
 
-    <!-- SCREEN: AUTH -->
+    <!-- SCREEN: AUTH (LOGIN) -->
     <div id="screen-auth" class="screen">
         <div class="auth-logo">H&P Portal</div>
         <form onsubmit="handleAuth(event)">
@@ -18,11 +20,11 @@
         </form>
     </div>
 
-    <!-- SCREEN: SETUP -->
+    <!-- SCREEN: SETUP (INICIO) -->
     <div id="screen-setup" class="screen">
         <div class="user-card">
             <div id="display-name" class="user-name">Hola</div>
-            <button onclick="logout()" class="btn-sec" style="padding:8px 15px; border-radius:12px;">Salir</button>
+            <button onclick="logout()" class="btn-sec" style="padding:10px 18px; border-radius:14px; font-weight:700;">Salir</button>
         </div>
 
         <div class="setup-wrap">
@@ -60,9 +62,9 @@
     <!-- SCREEN: SCANNER (INVENTARIO) -->
     <div id="screen-scanner" class="screen">
         <div class="user-card">
-            <button onclick="showScreen('screen-setup')" class="btn-sec" style="padding:8px 15px; border-radius:12px;">←</button>
+            <button onclick="showScreen('screen-setup')" class="btn-sec" style="padding:10px 18px; border-radius:14px; font-weight:700;">←</button>
             <div id="meta-loc" class="user-name" style="font-size:18px;">Ubicación</div>
-            <button onclick="showModal('modal-manual')" class="btn-sec" style="padding:8px 15px; border-radius:12px;">⌨️</button>
+            <button onclick="showModal('modal-manual')" class="btn-sec" style="padding:10px 18px; border-radius:14px; font-weight:700;">⌨️</button>
         </div>
         
         <div class="scanner-container-wrapper">
@@ -71,61 +73,61 @@
 
         <div style="margin-bottom:20px;">
             <span class="section-label">Cantidad a registrar</span>
-            <input type="number" id="scan-qty" class="auth-input" value="1" min="1" style="margin-bottom:0; text-align:center; font-weight:800; font-size:24px;">
+            <input type="number" id="scan-qty" class="auth-input" value="1" min="1" style="text-align:center; font-weight:900; font-size:26px; height:70px; margin-bottom:0; background:#fff;">
         </div>
 
-        <div id="last-scan-box" style="background:white; padding:20px; border-radius:24px; margin-bottom:100px;">
-            <div id="lsb-name" style="font-weight:800; font-size:18px;">Esperando escaneo...</div>
-            <div id="lsb-code" style="color:var(--text-dim); font-family:monospace;">---</div>
+        <div id="last-scan-box" style="background:white; padding:24px; border-radius:28px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom:120px;">
+            <div id="lsb-name" style="font-weight:900; font-size:20px; line-height:1.1;">Esperando escaneo...</div>
+            <div id="lsb-code" style="color:var(--text-dim); font-family:monospace; margin-top:5px; font-size:14px;">---</div>
         </div>
 
         <div class="footer-nav">
             <button onclick="endSession()" class="nav-btn btn-red">Finalizar Sesión</button>
-            <div class="nav-btn btn-sec" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:5px;">
-                <span id="counter-num" style="font-size:20px; font-weight:900;">0</span>
-                <span style="font-size:10px; font-weight:600; text-transform:uppercase;">Registrados</span>
+            <div class="nav-btn btn-sec" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px; flex:0.6;">
+                <span id="counter-num" style="font-size:22px; font-weight:900;">0</span>
+                <span style="font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">Regs</span>
             </div>
         </div>
     </div>
 
-    <!-- SCREEN: PEDIDO -->
+    <!-- SCREEN: LISTA PEDIDO -->
     <div id="screen-pedido" class="screen">
         <div class="user-card">
-            <button onclick="showScreen('screen-setup')" class="btn-sec" style="padding:8px 15px; border-radius:12px;">←</button>
+            <button onclick="showScreen('screen-setup')" class="btn-sec" style="padding:10px 18px; border-radius:14px; font-weight:700;">←</button>
             <div id="pedido-title" class="user-name" style="font-size:18px;">Pedido</div>
-            <button onclick="showModal('modal-manual')" class="btn-sec" style="padding:8px 15px; border-radius:12px;">⌨️</button>
+            <button onclick="showModal('modal-manual')" class="btn-sec" style="padding:10px 18px; border-radius:14px; font-weight:700;">⌨️</button>
         </div>
 
-        <div id="pedido-list" class="pedido-list" style="margin-top:10px; padding-bottom:100px;"></div>
+        <div id="pedido-list" class="pedido-list" style="margin-top:10px; padding-bottom:120px;"></div>
 
         <div class="footer-nav">
-            <button onclick="openPedidoScanner()" class="nav-btn btn-main" style="flex:2;">📷 Escanear Pedido</button>
+            <button onclick="openPedidoScanner()" class="nav-btn btn-main" style="flex:2.5;">📷 Escanear Pedido</button>
             <button onclick="endSession()" class="nav-btn btn-red" style="flex:1;">Cerrar</button>
         </div>
     </div>
 
-    <!-- OVERLAY: PEDIDO SCANNER -->
+    <!-- OVERLAY: CÁMARA PEDIDO -->
     <div id="pedido-scanner-overlay" class="screen">
-        <div class="user-card" style="position:relative; z-index:10;">
-            <button onclick="closePedidoScanner()" class="btn-sec" style="color:white; background:rgba(255,255,255,0.2);">✕ Cerrar</button>
-            <div id="pedido-scan-result" style="color:white; font-weight:800;">Apunta al código</div>
+        <div class="user-card" style="z-index:10;">
+            <button onclick="closePedidoScanner()" class="btn-sec" style="color:white; background:rgba(255,255,255,0.15);">✕ Cerrar</button>
+            <div id="pedido-scan-result" style="color:white; font-weight:900; font-size:16px;">Apunta al código</div>
         </div>
-        <div class="scanner-container-wrapper" style="margin-top:20px;">
+        <div class="scanner-container-wrapper" style="margin-top:20px; border-color:rgba(255,255,255,0.1);">
             <div id="qr-reader-pedido"></div>
         </div>
     </div>
 
-    <!-- MODAL: MANUAL -->
-    <div id="modal-manual" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10000; align-items:center; justify-content:center; padding:20px;">
-        <div style="background:white; width:100%; max-width:350px; padding:30px; border-radius:32px;">
-            <h3 style="margin-bottom:20px; text-align:center; font-weight:800;">Entrada Manual</h3>
-            <span class="section-label">Código</span>
-            <input type="text" id="manual-code" class="auth-input">
-            <span class="section-label">Cantidad</span>
-            <input type="number" id="manual-qty" class="auth-input" value="1" min="1">
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button onclick="hideModal('modal-manual')" class="btn-main btn-sec" style="flex:1;">Cancelar</button>
-                <button onclick="submitManual()" class="btn-main" style="flex:1;">Registrar</button>
+    <!-- MODAL: ENTRADA MANUAL -->
+    <div id="modal-manual" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(5px);">
+        <div style="background:white; width:100%; max-width:380px; padding:32px; border-radius:36px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <h3 style="margin-bottom:24px; text-align:center; font-weight:900; font-size:22px;">Entrada Manual</h3>
+            <span class="section-label">Código del Producto</span>
+            <input type="text" id="manual-code" class="auth-input" style="background:#f2f2f7;">
+            <span class="section-label">Cantidad a Registrar</span>
+            <input type="number" id="manual-qty" class="auth-input" value="1" min="1" style="background:#f2f2f7;">
+            <div style="display:flex; gap:12px; margin-top:15px;">
+                <button onclick="hideModal('modal-manual')" class="btn-main btn-sec" style="flex:1;">Volver</button>
+                <button onclick="submitManual()" class="btn-main" style="flex:1.5;">Registrar</button>
             </div>
         </div>
     </div>
