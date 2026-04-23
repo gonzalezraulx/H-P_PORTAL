@@ -124,17 +124,9 @@ async function initScanner(id, cb) {
   await stopScanner();
   html5QrScanner = new Html5Qrcode(id);
   try {
-    // Configuración mejorada para códigos de barras físicos
+    // Solo 1 clave permitida en el primer argumento
     await html5QrScanner.start(
-      { 
-        facingMode: "environment",
-        // Solicitar enfoque continuo y zoom si está disponible
-        advanced: [
-          { facingMode: "environment" },
-          { zoom: { min: 1, max: 4, step: 1 } },
-          { focusMode: "continuous" }
-        ]
-      }, 
+      { facingMode: "environment" }, 
       { 
         fps: 15,  // Aumentar FPS para mejor detección de códigos de barras
         qrbox: (w, h) => { 
