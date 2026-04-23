@@ -155,6 +155,7 @@ async function sendInventario(code) {
         hora: new Date().toLocaleTimeString() 
       })
     });
+    if (!res.ok) throw new Error("Servidor Google no responde");
     const data = await res.json();
     if (data.ok) {
         state.sessionCount++; document.getElementById('counter-num').textContent = state.sessionCount;
@@ -163,12 +164,13 @@ async function sendInventario(code) {
         document.getElementById('lsb-code').textContent = code;
         showSuccessFeedback();
     } else {
+        alert("GOOGLE DICE: " + data.error);
         document.getElementById('lsb-name').style.color = "red";
         document.getElementById('lsb-name').textContent = "❌ " + data.error;
         document.getElementById('lsb-code').textContent = code;
         if (navigator.vibrate) navigator.vibrate([100,50,100]);
     }
-  } catch(e) { alert("Error de red"); }
+  } catch(e) { alert("ERROR DE CONEXIÓN: " + e.message); }
 }
 
 function startInventario() {
