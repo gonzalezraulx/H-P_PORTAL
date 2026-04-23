@@ -2,7 +2,7 @@
  * H&P PORTAL — LOGIC FINAL (ESTABLE + BARRAS + HTML5-QRCODE)
  */
 
-const scriptUrl = "https://script.google.com/macros/s/AKfycbw6H-L18cW3I0P4cK0fHjJpL-W0E-XvW9A9ZOn8R7vM-m4B0Rj-6n9-6n9-6n9-6n/exec";
+const scriptUrl = "https://script.google.com/macros/s/AKfycbxG8Nf1kUY6NSnEEdnWdfN9oRHvSCtmZ8Mggcnn-l44suMOPIgAEa3GmOH7EvGIPFZc/exec";
 
 const TIENDAS_POR_MARCA = {
   "Huss": ["Huss 1", "Huss 2"],
