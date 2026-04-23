@@ -47,11 +47,14 @@ function showSuccessFeedback() {
 
 // === NAVEGACIÓN ===
 function showScreen(id) { 
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); 
+    document.querySelectorAll('.screen').forEach(s => {
+        s.classList.remove('active');
+        s.style.display = 'none'; // Forzar ocultamiento de todas
+    });
     const target = document.getElementById(id);
     if(target) {
         target.classList.add('active');
-        target.style.display = 'block'; // Asegurar visibilidad
+        target.style.display = 'block'; // Mostrar solo la elegida
     }
 }
 
