@@ -1,5 +1,5 @@
 /**
- * H&P PORTAL — LOGIC FINAL (ESTABLE + BARRAS + HTML5-QRCODE)
+ * H&P PORTAL — LOGIC FINAL (ESTABLE + DIAGNÓSTICO)
  */
 
 const scriptUrl = "https://script.google.com/macros/s/AKfycbwO0DX03mpRl_u7zcERiyFCHWT89Bn80KMQYfRRYCAL8Y_MNmyjFDaUzQVg35mrp9CpDg/exec";
@@ -14,24 +14,17 @@ let pedidoItems = [];
 let html5QrScanner = null;
 let lastScanTime = 0;
 
-// Inicialización de usuario
-try {
-    state.user = localStorage.getItem('h_user_name') || '';
-} catch(e) {}
+try { state.user = localStorage.getItem('h_user_name') || ''; } catch(e) {}
 
-// === FUNCIONES DE FEEDBACK ===
 function playBeep() {
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); 
-    gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    oscillator.start();
-    setTimeout(() => oscillator.stop(), 100);
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.setValueAtTime(880, audioCtx.currentTime); 
+    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); setTimeout(() => osc.stop(), 100);
   } catch(e) {}
 }
 
@@ -40,12 +33,9 @@ function showSuccessFeedback() {
   wrappers.forEach(w => w.classList.add('success'));
   playBeep();
   if (navigator.vibrate) navigator.vibrate(100);
-  setTimeout(() => {
-    wrappers.forEach(w => w.classList.remove('success'));
-  }, 1000);
+  setTimeout(() => wrappers.forEach(w => w.classList.remove('success')), 1000);
 }
 
-// === NAVEGACIÓN ===
 function showScreen(id) { 
     document.querySelectorAll('.screen').forEach(s => {
         s.classList.remove('active');
@@ -55,7 +45,6 @@ function showScreen(id) {
     if(target) {
         target.classList.add('active');
         target.style.display = 'block';
-        target.scrollTop = 0;
     }
 }
 
@@ -77,10 +66,7 @@ async function handleAuth(e) {
   const u = document.getElementById('auth-user').value.trim();
   const p = document.getElementById('auth-pass').value.trim();
   const btn = e.target.querySelector('button');
-  const originalText = btn.textContent;
-  
-  btn.textContent = "Verificando...";
-  btn.disabled = true;
+  btn.textContent = "Verificando..."; btn.disabled = true;
 
   try {
     const res = await fetch(scriptUrl, {
@@ -93,13 +79,12 @@ async function handleAuth(e) {
       localStorage.setItem('h_user_name', data.name); 
       checkAuth(); 
     } else { 
-      alert("Error: " + (data.error || "Credenciales inválidas")); 
+      alert("Error Google: " + (data.error || "Datos incorrectos")); 
     }
-  } catch(e) { 
-    alert("Error de conexión. Verifica el Script de Google."); 
+  } catch(error) { 
+    alert("FALLA TÉCNICA: " + error.message + "\n\nRevisa el despliegue en Google."); 
   } finally {
-    btn.textContent = originalText;
-    btn.disabled = false;
+    btn.textContent = "Acceder"; btn.disabled = false;
   }
 }
 
@@ -110,9 +95,7 @@ function selectBrand(b) {
   document.querySelectorAll('.brand-btn').forEach(btn => btn.classList.remove('active')); 
   b.classList.add('active'); 
   const menu = document.getElementById('dropdown-menu');
-  if(menu) {
-    menu.innerHTML = TIENDAS_POR_MARCA[state.brand].map(t => `<button class="drop-option" onclick="selectLocation('${t}')">${t}</button>`).join('');
-  }
+  if(menu) menu.innerHTML = TIENDAS_POR_MARCA[state.brand].map(t => `<button class="drop-option" onclick="selectLocation('${t}')">${t}</button>`).join('');
   state.location = ''; 
   const lbl = document.getElementById('dropdown-label');
   if(lbl) lbl.textContent = "Seleccionar..."; 
@@ -137,12 +120,9 @@ function checkReady() { const b = document.getElementById('btn-start'); if(b) b.
 
 function handleStart() { if (state.mode === 'inventario') startInventario(); else startPedido(); }
 
-// === SCANNER ===
 async function initScanner(id, cb) {
   await stopScanner();
-  if (typeof Html5Qrcode === 'undefined') return alert("Librería no cargada");
   html5QrScanner = new Html5Qrcode(id);
-  
   try {
     await html5QrScanner.start(
       { facingMode: "environment" }, 
@@ -160,25 +140,20 @@ async function initScanner(id, cb) {
 }
 
 async function stopScanner() {
-  if (html5QrScanner) {
-    try { await html5QrScanner.stop(); html5QrScanner = null; } catch(e) {}
-  }
+  if (html5QrScanner) { try { await html5QrScanner.stop(); html5QrScanner = null; } catch(e) {} }
 }
 
-// === LOGICA INVENTARIO ===
 function startInventario() {
   const el = document.getElementById('meta-loc'); if(el) el.textContent = state.location; 
   showScreen('screen-scanner');
   initScanner("qr-reader", (code) => {
-    state.sessionCount++; 
-    document.getElementById('counter-num').textContent = state.sessionCount;
+    state.sessionCount++; document.getElementById('counter-num').textContent = state.sessionCount;
     document.getElementById('lsb-name').textContent = "Escaneado: " + code;
     document.getElementById('lsb-code').textContent = code;
     fetch(scriptUrl, { method: 'POST', body: JSON.stringify({ tipo: 'inventario', marca: state.brand, usuario: state.user, ubicacion: state.location, codigo: code, fecha: new Date().toLocaleDateString(), hora: new Date().toLocaleTimeString() }), mode: 'no-cors' });
   });
 }
 
-// === LOGICA PEDIDOS ===
 async function startPedido() {
   const el = document.getElementById('pedido-title'); if(el) el.textContent = state.location; 
   showScreen('screen-pedido');
@@ -186,7 +161,7 @@ async function startPedido() {
     const res = await fetch(`${scriptUrl}?action=getPedido&marca=${encodeURIComponent(state.brand)}&destino=${encodeURIComponent(state.location)}`);
     const data = await res.json();
     if(data.ok) { pedidoItems = data.items; renderPedidoList(); }
-  } catch(e) { alert("Error cargando lista: " + e.message); }
+  } catch(e) { alert("ERROR DE CARGA: " + e.message); }
 }
 
 function renderPedidoList() {
@@ -195,7 +170,6 @@ function renderPedidoList() {
   const dn = pedidoItems.reduce((a, i) => a + i.confirmada, 0);
   const prg = document.getElementById('pedido-progress-fill');
   if (tot > 0 && prg) prg.style.width = (dn/tot*100) + '%';
-  
   list.innerHTML = pedidoItems.map(item => {
     const isComplete = item.pedida > 0 && item.confirmada >= item.pedida;
     return `
@@ -213,8 +187,7 @@ function processScan(code) {
   const item = pedidoItems.find(i => i.codigo == code);
   const res = document.getElementById('pedido-scan-result');
   if (item && item.confirmada < item.pedida) {
-    item.confirmada++; 
-    renderPedidoList();
+    item.confirmada++; renderPedidoList();
     fetch(scriptUrl, { method: 'POST', body: JSON.stringify({ tipo: 'pedido', marca: state.brand, location: state.location, rowIndex: item.rowIndex }), mode: 'no-cors' });
     if(res) { res.style.color = "#34c759"; res.textContent = "✓ " + item.descripcion; }
   } else if(res) {
@@ -239,5 +212,4 @@ function submitManual() {
   if(codeEl) codeEl.value = ""; hideModal('modal-manual');
 }
 
-// Inicio
 document.addEventListener('DOMContentLoaded', checkAuth);
