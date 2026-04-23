@@ -133,24 +133,30 @@ async function initScanner(id, cb) {
     Html5QrcodeSupportedFormats.QR_CODE,
   ];
   html5QrScanner = new Html5Qrcode(id, { formatsToSupport: formats, verbose: false });
-  try {
+
+  // Intentar cámara trasera, si falla usar cualquier cámara disponible
+  const startWithCamera = async (cameraConfig) => {
     await html5QrScanner.start(
-      "environment",
-      { 
-        fps: 10,
-        qrbox: (w, h) => ({ width: Math.floor(w * 0.85), height: Math.floor(h * 0.4) }),
-        disableFlip: false
-      }, 
+      cameraConfig,
+      { fps: 10, qrbox: (w, h) => ({ width: Math.floor(w * 0.85), height: Math.floor(h * 0.4) }) },
       (txt) => {
         const now = Date.now();
-        if (now - lastScanTime > 1500) {
-          lastScanTime = now;
-          cb(txt);
-        }
+        if (now - lastScanTime > 1500) { lastScanTime = now; cb(txt); }
       },
       () => {}
     );
-  } catch (err) { alert("Error al iniciar cámara: " + err); }
+  };
+
+  try {
+    await startWithCamera({ facingMode: "environment" });
+  } catch (err1) {
+    try {
+      // Fallback: dejar que el navegador elija la cámara
+      await startWithCamera({});
+    } catch (err2) {
+      alert("Error al iniciar cámara: " + err2);
+    }
+  }
 }
 
 // Nueva función para enfocar manualmente
