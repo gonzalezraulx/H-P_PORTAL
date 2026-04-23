@@ -1,8 +1,8 @@
 /**
- * H&P PORTAL — LOGIC FINAL (ESTABLE + DIAGNÓSTICO)
+ * H&P PORTAL — LOGIC FINAL (FILTRO INVENTARIO + ESTABLE)
  */
 
-const scriptUrl = "https://script.google.com/macros/s/AKfycbxzMUfqG5S6xOPaLH3mF6_ImzRzGdvtze5xeDLz-072KR_T-S-8kfTSmwH9jZCQvgTzNw/exec";
+const scriptUrl = "https://script.google.com/macros/s/AKfycbx9y7YaVkMZIWl2QzTBFkxtvkruIHfCbCMrCMF206rIGzr0PaypRvV8FR4P27jID1Z6EQ/exec";
 
 const TIENDAS_POR_MARCA = {
   "Huss": ["Huss 1", "Huss 2"],
@@ -67,7 +67,6 @@ async function handleAuth(e) {
   const p = document.getElementById('auth-pass').value.trim();
   const btn = e.target.querySelector('button');
   btn.textContent = "Verificando..."; btn.disabled = true;
-
   try {
     const res = await fetch(scriptUrl, {
       method: 'POST',
@@ -131,7 +130,6 @@ async function initScanner(id, cb) {
         const now = Date.now();
         if (now - lastScanTime > 1500) {
           lastScanTime = now;
-          showSuccessFeedback();
           cb(txt);
         }
       }
@@ -143,15 +141,40 @@ async function stopScanner() {
   if (html5QrScanner) { try { await html5QrScanner.stop(); html5QrScanner = null; } catch(e) {} }
 }
 
+async function sendInventario(code) {
+  try {
+    const res = await fetch(scriptUrl, {
+      method: 'POST',
+      body: JSON.stringify({ 
+        tipo: 'inventario', 
+        marca: state.brand, 
+        usuario: state.user, 
+        ubicacion: state.location, 
+        codigo: code, 
+        fecha: new Date().toLocaleDateString(), 
+        hora: new Date().toLocaleTimeString() 
+      })
+    });
+    const data = await res.json();
+    if (data.ok) {
+        state.sessionCount++; document.getElementById('counter-num').textContent = state.sessionCount;
+        document.getElementById('lsb-name').style.color = "#000";
+        document.getElementById('lsb-name').textContent = "✓ " + data.descripcion;
+        document.getElementById('lsb-code').textContent = code;
+        showSuccessFeedback();
+    } else {
+        document.getElementById('lsb-name').style.color = "red";
+        document.getElementById('lsb-name').textContent = "❌ " + data.error;
+        document.getElementById('lsb-code').textContent = code;
+        if (navigator.vibrate) navigator.vibrate([100,50,100]);
+    }
+  } catch(e) { alert("Error de red"); }
+}
+
 function startInventario() {
   const el = document.getElementById('meta-loc'); if(el) el.textContent = state.location; 
   showScreen('screen-scanner');
-  initScanner("qr-reader", (code) => {
-    state.sessionCount++; document.getElementById('counter-num').textContent = state.sessionCount;
-    document.getElementById('lsb-name').textContent = "Escaneado: " + code;
-    document.getElementById('lsb-code').textContent = code;
-    fetch(scriptUrl, { method: 'POST', body: JSON.stringify({ tipo: 'inventario', marca: state.brand, usuario: state.user, ubicacion: state.location, codigo: code, fecha: new Date().toLocaleDateString(), hora: new Date().toLocaleTimeString() }), mode: 'no-cors' });
-  });
+  initScanner("qr-reader", (code) => { sendInventario(code); });
 }
 
 async function startPedido() {
@@ -187,11 +210,12 @@ function processScan(code) {
   const item = pedidoItems.find(i => i.codigo == code);
   const res = document.getElementById('pedido-scan-result');
   if (item && item.confirmada < item.pedida) {
-    item.confirmada++; renderPedidoList();
-    fetch(scriptUrl, { method: 'POST', body: JSON.stringify({ tipo: 'pedido', marca: state.brand, location: state.location, rowIndex: item.rowIndex }), mode: 'no-cors' });
+    item.confirmada++; renderPedidoList(); showSuccessFeedback();
+    fetch(scriptUrl, { method: 'POST', body: JSON.stringify({ tipo: 'pedido', marca: state.brand, location: state.location, rowIndex: item.rowIndex }) });
     if(res) { res.style.color = "#34c759"; res.textContent = "✓ " + item.descripcion; }
   } else if(res) {
     res.style.color = "#ff3b30"; res.textContent = "Código: " + code + (item ? " (Ya completo)" : " (No en lista)");
+    if (navigator.vibrate) navigator.vibrate([100,50,100]);
   }
 }
 
@@ -201,13 +225,11 @@ function endSession() { stopScanner().then(() => location.reload()); }
 
 function submitManual() {
   const codeEl = document.getElementById('manual-code');
-  const code = codeEl ? codeEl.value : ""; if(!code) return;
-  showSuccessFeedback();
+  const code = codeEl ? codeEl.value.trim() : ""; if(!code) return;
   if (document.getElementById('screen-pedido').classList.contains('active') || document.getElementById('pedido-scanner-overlay').classList.contains('active')) {
     processScan(code); 
   } else {
-    state.sessionCount++; document.getElementById('counter-num').textContent = state.sessionCount;
-    fetch(scriptUrl, { method: 'POST', body: JSON.stringify({ tipo: 'inventario', marca: state.brand, usuario: state.user, ubicacion: state.location, codigo: code, fecha: new Date().toLocaleDateString(), hora: new Date().toLocaleTimeString() }), mode: 'no-cors' });
+    sendInventario(code);
   }
   if(codeEl) codeEl.value = ""; hideModal('modal-manual');
 }
