@@ -122,19 +122,31 @@ function handleStart() { if (state.mode === 'inventario') startInventario(); els
 
 async function initScanner(id, cb) {
   await stopScanner();
-  html5QrScanner = new Html5Qrcode(id);
+  const formats = [
+    Html5QrcodeSupportedFormats.EAN_13,
+    Html5QrcodeSupportedFormats.EAN_8,
+    Html5QrcodeSupportedFormats.UPC_A,
+    Html5QrcodeSupportedFormats.UPC_E,
+    Html5QrcodeSupportedFormats.CODE_128,
+    Html5QrcodeSupportedFormats.CODE_39,
+    Html5QrcodeSupportedFormats.ITF,
+    Html5QrcodeSupportedFormats.QR_CODE,
+  ];
+  html5QrScanner = new Html5Qrcode(id, { formatsToSupport: formats, verbose: false });
   try {
-    // Solo 1 clave permitida en el primer argumento
     await html5QrScanner.start(
-      "environment", 
+      "environment",
       { 
-        fps: 15,  // Aumentar FPS para mejor detección de códigos de barras
-        qrbox: (w, h) => { 
-          const s = Math.min(w, h) * 0.85;  // Área más grande para barras
-          return { width: s, height: s }; 
-        },
-        aspectRatio: 1.0,
-        disableFlip: false
+        fps: 10,
+        // Caja rectangular horizontal — ideal para códigos de barras lineales
+        qrbox: (w, h) => ({ width: Math.floor(w * 0.9), height: Math.floor(h * 0.35) }),
+        aspectRatio: 1.7778, // 16:9 fuerza mayor resolución en móvil
+        disableFlip: false,
+        videoConstraints: {
+          facingMode: "environment",
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
       }, 
       (txt) => {
         const now = Date.now();
@@ -143,10 +155,7 @@ async function initScanner(id, cb) {
           cb(txt);
         }
       },
-      (err) => {
-        // Ignorar errores de "no hay código" para no molestar
-        // console.debug(err);
-      }
+      () => {}
     );
   } catch (err) { alert("Error al iniciar cámara: " + err); }
 }
