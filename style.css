@@ -1,0 +1,52 @@
+:root {
+    --bg: #000;
+    --text: #fff;
+    --success: #00ff00;
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.scanner-wrapper {
+    position: relative;
+    width: 90vw;
+    height: 90vw;
+    max-width: 500px;
+    max-height: 500px;
+    border: 5px solid #333;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+#reader {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+#reader__dashboard, #reader button {
+    display: none !important;
+}
+
+.scanner-wrapper.success {
+    border-color: var(--success);
+}
+
+.status {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    background: rgba(0,0,0,0.5);
+    padding: 5px 0;
+    font-size: 0.8rem;
+}
