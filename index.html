@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>H&P Portal</title>
-  <!-- Usando html5-qrcode en lugar de Quagga -->
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <!-- Usando html5-qrcode via JSDelivr para mayor estabilidad -->
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode/html5-qrcode.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- PANTALLA LOGIN -->
-  <div id="screen-auth" class="screen">
+  <!-- PANTALLA LOGIN (Activa por defecto para evitar pantalla en blanco) -->
+  <div id="screen-auth" class="screen active">
     <div class="setup-wrap">
       <div class="auth-logo">H&P Portal</div>
       <div style="background:white; padding:30px; border-radius:32px; box-shadow:0 10px 30px rgba(0,0,0,0.05);">
