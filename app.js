@@ -1,8 +1,8 @@
 /**
- * H&P PORTAL — LOGIC FINAL (FILTRO INVENTARIO + ESTABLE)
+ * H&P PORTAL — LOGIC FINAL (FILTRO INVENTARIO + CANTIDADES)
  */
 
-const scriptUrl = "https://script.google.com/macros/s/AKfycbwZXVqMo3YVx3TUQl8601qWM47N2nCQn21_OfRlljwXkf6W-zZybUSmfcmKyIan_Lw5Rw/exec";
+const scriptUrl = "https://script.google.com/macros/s/AKfycbwz0e6lh0yzO7W66YACZQRc0OOTjOfjR03wWXQzO6J1L_PHyTJshbelEqkvRqUrYPLocA/exec";
 
 const TIENDAS_POR_MARCA = {
   "Huss": ["Huss 1", "Huss 2"],
@@ -29,7 +29,7 @@ function playBeep() {
 }
 
 function showSuccessFeedback() {
-  const wrappers = document.querySelectorAll('.scanner-container-wrapper');
+  const wrappers = document.querySelectorAll('.scanner-container-wrapper, .scanner-container-wrapper-overlay');
   wrappers.forEach(w => w.classList.add('success'));
   playBeep();
   if (navigator.vibrate) navigator.vibrate(100);
@@ -81,7 +81,7 @@ async function handleAuth(e) {
       alert("Error Google: " + (data.error || "Datos incorrectos")); 
     }
   } catch(error) { 
-    alert("FALLA TÉCNICA: " + error.message + "\n\nRevisa el despliegue en Google."); 
+    alert("FALLA TÉCNICA: " + error.message); 
   } finally {
     btn.textContent = "Acceder"; btn.disabled = false;
   }
@@ -141,7 +141,14 @@ async function stopScanner() {
   if (html5QrScanner) { try { await html5QrScanner.stop(); html5QrScanner = null; } catch(e) {} }
 }
 
-async function sendInventario(code) {
+async function sendInventario(code, manualQty) {
+  // Tomar cantidad del input de escaneo o del parámetro manual
+  let qty = manualQty;
+  if (!qty) {
+    const qtyInput = document.getElementById('scan-qty');
+    qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
+  }
+
   try {
     const res = await fetch(scriptUrl, {
       method: 'POST',
@@ -151,6 +158,7 @@ async function sendInventario(code) {
         usuario: state.user, 
         ubicacion: state.location, 
         codigo: code, 
+        cantidad: qty,
         fecha: new Date().toLocaleDateString(), 
         hora: new Date().toLocaleTimeString() 
       })
@@ -158,13 +166,13 @@ async function sendInventario(code) {
     if (!res.ok) throw new Error("Servidor Google no responde");
     const data = await res.json();
     if (data.ok) {
-        state.sessionCount++; document.getElementById('counter-num').textContent = state.sessionCount;
+        state.sessionCount += qty; 
+        document.getElementById('counter-num').textContent = state.sessionCount;
         document.getElementById('lsb-name').style.color = "#000";
-        document.getElementById('lsb-name').textContent = "✓ " + data.descripcion;
+        document.getElementById('lsb-name').textContent = "✓ ("+qty+") " + data.descripcion;
         document.getElementById('lsb-code').textContent = code;
         showSuccessFeedback();
     } else {
-        alert("GOOGLE DICE: " + data.error);
         document.getElementById('lsb-name').style.color = "red";
         document.getElementById('lsb-name').textContent = "❌ " + data.error;
         document.getElementById('lsb-code').textContent = code;
@@ -227,13 +235,21 @@ function endSession() { stopScanner().then(() => location.reload()); }
 
 function submitManual() {
   const codeEl = document.getElementById('manual-code');
-  const code = codeEl ? codeEl.value.trim() : ""; if(!code) return;
+  const qtyEl = document.getElementById('manual-qty');
+  const code = codeEl ? codeEl.value.trim() : ""; 
+  const qty = qtyEl ? parseInt(qtyEl.value) || 1 : 1;
+  
+  if(!code) return;
+  
   if (document.getElementById('screen-pedido').classList.contains('active') || document.getElementById('pedido-scanner-overlay').classList.contains('active')) {
     processScan(code); 
   } else {
-    sendInventario(code);
+    sendInventario(code, qty);
   }
-  if(codeEl) codeEl.value = ""; hideModal('modal-manual');
+  
+  if(codeEl) codeEl.value = ""; 
+  if(qtyEl) qtyEl.value = "1";
+  hideModal('modal-manual');
 }
 
 document.addEventListener('DOMContentLoaded', checkAuth);
