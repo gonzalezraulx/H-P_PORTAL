@@ -2,7 +2,7 @@
  * H&P PORTAL — LOGIC FINAL (FILTRO INVENTARIO + ESTABLE)
  */
 
-const scriptUrl = "https://script.google.com/macros/s/AKfycbx9y7YaVkMZIWl2QzTBFkxtvkruIHfCbCMrCMF206rIGzr0PaypRvV8FR4P27jID1Z6EQ/exec";
+const scriptUrl = "https://script.google.com/macros/s/AKfycbwZXVqMo3YVx3TUQl8601qWM47N2nCQn21_OfRlljwXkf6W-zZybUSmfcmKyIan_Lw5Rw/exec";
 
 const TIENDAS_POR_MARCA = {
   "Huss": ["Huss 1", "Huss 2"],
