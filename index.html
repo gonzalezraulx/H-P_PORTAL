@@ -6,110 +6,136 @@
     <title>H&P Portal</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode/html5-qrcode.min.js"></script>
+    <style>
+        /* Ajuste rápido para que no se estire en PC */
+        .screen-content {
+            max-width: 420px;
+            margin: 0 auto;
+            position: relative;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
 </head>
 <body>
 
+    <!-- PANTALLA: LOGIN -->
     <div id="screen-auth" class="screen">
-        <div class="auth-logo">H&P Portal</div>
-        <form onsubmit="handleAuth(event)">
-            <input type="text" id="auth-user" class="auth-input" placeholder="Usuario" required autocomplete="username">
-            <input type="password" id="auth-pass" class="auth-input" placeholder="Contraseña" required autocomplete="current-password">
-            <button type="submit" class="btn-main">Acceder</button>
-        </form>
+        <div class="screen-content">
+            <div class="auth-logo">H&P Portal</div>
+            <form onsubmit="handleAuth(event)">
+                <input type="text" id="auth-user" class="auth-input" placeholder="Usuario" required autocomplete="username">
+                <input type="password" id="auth-pass" class="auth-input" placeholder="Contraseña" required autocomplete="current-password">
+                <button type="submit" class="btn-main">Acceder</button>
+            </form>
+        </div>
     </div>
 
+    <!-- PANTALLA: CONFIGURACIÓN -->
     <div id="screen-setup" class="screen">
-        <div class="user-card">
-            <div id="display-name" class="user-name">Hola</div>
-            <button onclick="logout()" class="btn-sec" style="padding:10px 18px; border-radius:14px; font-weight:700;">Salir</button>
-        </div>
-
-        <div class="setup-wrap">
-            <div>
-                <span class="section-label">Paso 1: Marca</span>
-                <div class="selector-group">
-                    <button class="btn-select brand-btn" data-brand="Huss" onclick="selectBrand(this)"><span>🏨</span>Hussongs</button>
-                    <button class="btn-select brand-btn" data-brand="Papas" onclick="selectBrand(this)"><span>🍟</span>Papas</button>
-                </div>
+        <div class="screen-content">
+            <div class="user-card">
+                <div id="display-name" class="user-name">Hola</div>
+                <button onclick="logout()" class="btn-sec" style="padding:10px 18px; border-radius:14px; font-weight:700;">Salir</button>
             </div>
 
-            <div>
-                <span class="section-label">Paso 2: Modo</span>
-                <div class="selector-group">
-                    <button class="btn-select mode-btn" data-mode="inventario" onclick="selectMode(this)"><span>📦</span>Inventario</button>
-                    <button class="btn-select mode-btn" data-mode="pedido" onclick="selectMode(this)"><span>📋</span>Pedidos</button>
+            <div class="setup-wrap">
+                <div>
+                    <span class="section-label">Paso 1: Marca</span>
+                    <div class="selector-group">
+                        <button class="btn-select brand-btn" data-brand="Huss" onclick="selectBrand(this)"><span>🏨</span>Hussongs</button>
+                        <button class="btn-select brand-btn" data-brand="Papas" onclick="selectBrand(this)"><span>🍟</span>Papas</button>
+                    </div>
                 </div>
-            </div>
 
-            <div>
-                <span class="section-label">Paso 3: Destino</span>
-                <div style="position:relative;">
-                    <button class="drop-trigger" onclick="toggleDropdown()">
-                        <span id="dropdown-label">Seleccionar...</span>
-                        <span>▼</span>
-                    </button>
-                    <div id="dropdown-menu" class="drop-list"></div>
+                <div>
+                    <span class="section-label">Paso 2: Modo</span>
+                    <div class="selector-group">
+                        <button class="btn-select mode-btn" data-mode="inventario" onclick="selectMode(this)"><span>📦</span>Inventario</button>
+                        <button class="btn-select mode-btn" data-mode="pedido" onclick="selectMode(this)"><span>📋</span>Pedidos</button>
+                    </div>
                 </div>
-            </div>
 
-            <button id="btn-start" class="btn-main" disabled onclick="handleStart()" style="margin-top:10px;">Comenzar</button>
+                <div>
+                    <span class="section-label">Paso 3: Destino</span>
+                    <div style="position:relative;">
+                        <button class="drop-trigger" onclick="toggleDropdown()">
+                            <span id="dropdown-label">Seleccionar...</span>
+                            <span>▼</span>
+                        </button>
+                        <div id="dropdown-menu" class="drop-list"></div>
+                    </div>
+                </div>
+
+                <button id="btn-start" class="btn-main" disabled onclick="handleStart()" style="margin-top:10px;">Comenzar</button>
+            </div>
         </div>
     </div>
 
+    <!-- PANTALLA: ESCÁNER INVENTARIO -->
     <div id="screen-scanner" class="screen">
-        <div class="user-card">
-            <button onclick="showScreen('screen-setup')" class="btn-sec" style="padding:10px 18px; border-radius:14px; font-weight:700;">←</button>
-            <div id="meta-loc" class="user-name" style="font-size:18px;">Ubicación</div>
-            <button onclick="showModal('modal-manual')" class="btn-sec" style="padding:10px 18px; border-radius:14px; font-weight:700;">⌨️</button>
-        </div>
-        
-        <div class="scanner-container-wrapper">
-            <div id="qr-reader"></div>
-        </div>
+        <div class="screen-content">
+            <div class="user-card">
+                <button onclick="showScreen('screen-setup')" class="btn-sec" style="padding:10px 18px; border-radius:14px; font-weight:700;">←</button>
+                <div id="meta-loc" class="user-name" style="font-size:18px;">Ubicación</div>
+                <button onclick="showModal('modal-manual')" class="btn-sec" style="padding:10px 18px; border-radius:14px; font-weight:700;">⌨️</button>
+            </div>
+            
+            <div class="scanner-container-wrapper">
+                <div id="qr-reader"></div>
+            </div>
 
-        <!-- Cantidad pequeña para no estorbar el diseño -->
-        <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:10px;">
-            <span class="section-label" style="margin:0;">Cantidad:</span>
-            <input type="number" id="scan-qty" value="1" min="1" style="width:60px; height:35px; border-radius:10px; border:1px solid #ddd; text-align:center; font-weight:800;">
-        </div>
+            <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:10px;">
+                <span class="section-label" style="margin:0;">Cantidad:</span>
+                <input type="number" id="scan-qty" value="1" min="1" style="width:60px; height:35px; border-radius:10px; border:1px solid #ddd; text-align:center; font-weight:800;">
+            </div>
 
-        <div id="last-scan-box" style="background:white; padding:24px; border-radius:28px; margin-bottom:100px;">
-            <div id="lsb-name" style="font-weight:900; font-size:20px;">Esperando...</div>
-            <div id="lsb-code" style="color:var(--text-dim); font-family:monospace; font-size:14px;">---</div>
-        </div>
+            <div id="last-scan-box" style="background:white; padding:24px; border-radius:28px; margin-bottom:120px;">
+                <div id="lsb-name" style="font-weight:900; font-size:20px;">Esperando...</div>
+                <div id="lsb-code" style="color:var(--text-dim); font-family:monospace; font-size:14px;">---</div>
+            </div>
 
-        <div class="footer-nav">
-            <button onclick="endSession()" class="nav-btn btn-red">Finalizar</button>
-            <div class="nav-btn btn-sec" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px; flex:0.6;">
-                <span id="counter-num" style="font-size:22px; font-weight:900;">0</span>
-                <span style="font-size:10px; font-weight:800; text-transform:uppercase;">Regs</span>
+            <div class="footer-nav" style="max-width:420px; left:0; right:0; margin:0 auto; width:calc(100% - 40px);">
+                <button onclick="endSession()" class="nav-btn btn-red">Finalizar</button>
+                <div class="nav-btn btn-sec" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px; flex:0.6;">
+                    <span id="counter-num" style="font-size:22px; font-weight:900;">0</span>
+                    <span style="font-size:10px; font-weight:800; text-transform:uppercase;">Regs</span>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- PANTALLA: LISTA PEDIDO -->
     <div id="screen-pedido" class="screen">
-        <div class="user-card">
-            <button onclick="showScreen('screen-setup')" class="btn-sec" style="padding:10px 18px; border-radius:14px; font-weight:700;">←</button>
-            <div id="pedido-title" class="user-name" style="font-size:18px;">Pedido</div>
-            <button onclick="showModal('modal-manual')" class="btn-sec" style="padding:10px 18px; border-radius:14px; font-weight:700;">⌨️</button>
-        </div>
-        <div id="pedido-list" class="pedido-list" style="margin-top:10px; padding-bottom:120px;"></div>
-        <div class="footer-nav">
-            <button onclick="openPedidoScanner()" class="nav-btn btn-main" style="flex:2.5;">📷 Escanear Pedido</button>
-            <button onclick="endSession()" class="nav-btn btn-red" style="flex:1;">Cerrar</button>
+        <div class="screen-content">
+            <div class="user-card">
+                <button onclick="showScreen('screen-setup')" class="btn-sec" style="padding:10px 18px; border-radius:14px; font-weight:700;">←</button>
+                <div id="pedido-title" class="user-name" style="font-size:18px;">Pedido</div>
+                <button onclick="showModal('modal-manual')" class="btn-sec" style="padding:10px 18px; border-radius:14px; font-weight:700;">⌨️</button>
+            </div>
+            <div id="pedido-list" class="pedido-list" style="margin-top:10px; padding-bottom:120px;"></div>
+            <div class="footer-nav" style="max-width:420px; left:0; right:0; margin:0 auto; width:calc(100% - 40px);">
+                <button onclick="openPedidoScanner()" class="nav-btn btn-main" style="flex:2.5;">📷 Escanear Pedido</button>
+                <button onclick="endSession()" class="nav-btn btn-red" style="flex:1;">Cerrar</button>
+            </div>
         </div>
     </div>
 
+    <!-- OVERLAY: CÁMARA PEDIDO -->
     <div id="pedido-scanner-overlay" class="screen">
-        <div class="user-card" style="z-index:10;">
-            <button onclick="closePedidoScanner()" class="btn-sec" style="color:white; background:rgba(255,255,255,0.15);">✕ Cerrar</button>
-            <div id="pedido-scan-result" style="color:white; font-weight:900;">Apunta al código</div>
-        </div>
-        <div class="scanner-container-wrapper" style="margin-top:20px;">
-            <div id="qr-reader-pedido"></div>
+        <div class="screen-content">
+            <div class="user-card" style="z-index:10;">
+                <button onclick="closePedidoScanner()" class="btn-sec" style="color:white; background:rgba(255,255,255,0.15);">✕ Cerrar</button>
+                <div id="pedido-scan-result" style="color:white; font-weight:900;">Apunta al código</div>
+            </div>
+            <div class="scanner-container-wrapper" style="margin-top:20px;">
+                <div id="qr-reader-pedido"></div>
+            </div>
         </div>
     </div>
 
+    <!-- MODAL: MANUAL -->
     <div id="modal-manual" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(5px);">
         <div style="background:white; width:100%; max-width:380px; padding:32px; border-radius:36px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
             <h3 style="margin-bottom:24px; text-align:center; font-weight:900;">Entrada Manual</h3>
