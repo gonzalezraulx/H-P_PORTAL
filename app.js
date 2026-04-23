@@ -126,7 +126,7 @@ async function initScanner(id, cb) {
   try {
     // Solo 1 clave permitida en el primer argumento
     await html5QrScanner.start(
-      { facingMode: "environment" }, 
+      "environment", 
       { 
         fps: 15,  // Aumentar FPS para mejor detección de códigos de barras
         qrbox: (w, h) => { 
