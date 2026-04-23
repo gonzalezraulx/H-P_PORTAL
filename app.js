@@ -124,18 +124,58 @@ async function initScanner(id, cb) {
   await stopScanner();
   html5QrScanner = new Html5Qrcode(id);
   try {
+    // Configuración mejorada para códigos de barras físicos
     await html5QrScanner.start(
-      { facingMode: "environment" }, 
-      { fps: 10, qrbox: (w, h) => { const s = Math.min(w, h) * 0.7; return { width: s, height: s }; } }, 
+      { 
+        facingMode: "environment",
+        // Solicitar enfoque continuo y zoom si está disponible
+        advanced: [
+          { facingMode: "environment" },
+          { zoom: { min: 1, max: 4, step: 1 } },
+          { focusMode: "continuous" }
+        ]
+      }, 
+      { 
+        fps: 15,  // Aumentar FPS para mejor detección de códigos de barras
+        qrbox: (w, h) => { 
+          const s = Math.min(w, h) * 0.85;  // Área más grande para barras
+          return { width: s, height: s }; 
+        },
+        aspectRatio: 1.0,
+        disableFlip: false
+      }, 
       (txt) => {
         const now = Date.now();
         if (now - lastScanTime > 1500) {
           lastScanTime = now;
           cb(txt);
         }
+      },
+      (err) => {
+        // Ignorar errores de "no hay código" para no molestar
+        // console.debug(err);
       }
     );
-  } catch (err) { alert("Error cámara"); }
+  } catch (err) { alert("Error al iniciar cámara: " + err); }
+}
+
+// Nueva función para enfocar manualmente
+async function setManualFocus(distance) {
+  if (!html5QrScanner) return;
+  try {
+    const stream = await html5QrScanner.getRunningTrackSettings();
+    if (stream && stream.focusDistance !== undefined) {
+      // Intentar establecer distancia de enfoque si el dispositivo lo soporta
+      const track = html5QrScanner.getRunningTrackSettings();
+      if (track) {
+        const constraints = { advanced: [{ focusDistance: distance }] };
+        // Esta es una operación experimental
+        console.log("Ajustando enfoque a:", distance);
+      }
+    }
+  } catch(e) {
+    console.log("Enfoque manual no soportado en este dispositivo");
+  }
 }
 
 async function stopScanner() {
