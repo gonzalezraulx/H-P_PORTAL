@@ -1,282 +1,184 @@
-/**
- * H&P PORTAL — LOGIC FINAL (FILTRO INVENTARIO + CANTIDADES)
- * VERIFICADO — REVISIÓN FINAL
- */
+let html5QrCode;
+let isScanning = false;
+let history = JSON.parse(localStorage.getItem('scannerHistory')) || [];
 
-const scriptUrl = "https://script.google.com/macros/s/AKfycbwz0e6lh0yzO7W66YACZQRc0OOTjOfjR03wWXQzO6J1L_PHyTJshbelEqkvRqUrYPLocA/exec";
+// DOM Elements
+const btnStartScan = document.getElementById('btn-start-scan');
+const btnStopScan = document.getElementById('btn-stop-scan');
+const readerElement = document.getElementById('reader');
+const modal = document.getElementById('result-modal');
+const resultText = document.getElementById('scanned-result-text');
+const btnCloseModal = document.getElementById('btn-close-modal');
+const btnCopy = document.getElementById('btn-copy');
+const navItems = document.querySelectorAll('.nav-item');
+const views = document.querySelectorAll('.view');
+const pageTitle = document.getElementById('page-title');
+const historyList = document.getElementById('history-list');
 
-const TIENDAS_POR_MARCA = {
-  "Huss": ["Huss 1", "Huss 2"],
-  "Papas": ["Neo", "Rosarito"]
-};
-
-let state = { brand: '', mode: '', location: '', user: '', sessionCount: 0 };
-let pedidoItems = []; 
-let html5QrScanner = null;
-let lastScanTime = 0;
-
-try { state.user = localStorage.getItem('h_user_name') || ''; } catch(e) {}
-
-function playBeep() {
-  try {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'sine'; osc.frequency.setValueAtTime(880, audioCtx.currentTime); 
-    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(); setTimeout(() => osc.stop(), 100);
-  } catch(e) {}
-}
-
-function showSuccessFeedback() {
-  const wrappers = document.querySelectorAll('.scanner-container-wrapper, .scanner-container-wrapper-overlay');
-  wrappers.forEach(w => w.classList.add('success'));
-  playBeep();
-  if (navigator.vibrate) navigator.vibrate(100);
-  setTimeout(() => wrappers.forEach(w => w.classList.remove('success')), 1000);
-}
-
-function showScreen(id) { 
-    document.querySelectorAll('.screen').forEach(s => {
-        s.classList.remove('active');
-        s.style.display = 'none';
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    renderHistory();
+    
+    // Navigation Logic
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            if(item.dataset.target) {
+                switchView(item.dataset.target);
+                navItems.forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                
+                // Update Title
+                pageTitle.textContent = item.querySelector('span').textContent;
+            }
+        });
     });
-    const target = document.getElementById(id);
-    if(target) {
-        target.classList.add('active');
-        target.style.display = 'block';
-    }
-}
 
-function showModal(id) { document.getElementById(id).style.display = 'flex'; }
-function hideModal(id) { document.getElementById(id).style.display = 'none'; }
+    // Scanner Buttons
+    btnStartScan.addEventListener('click', startScanner);
+    btnStopScan.addEventListener('click', stopScanner);
 
-function checkAuth() { 
-  if (state.user) { 
-    const el = document.getElementById('display-name');
-    if(el) el.textContent = "Hola, " + state.user; 
-    showScreen('screen-setup'); 
-  } else { 
-    showScreen('screen-auth'); 
-  } 
-}
-
-async function handleAuth(e) {
-  e.preventDefault();
-  const u = document.getElementById('auth-user').value.trim();
-  const p = document.getElementById('auth-pass').value.trim();
-  const btn = e.target.querySelector('button');
-  btn.textContent = "Verificando..."; btn.disabled = true;
-  try {
-    const res = await fetch(scriptUrl, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'login', username: u, password: p })
+    // Modal Buttons
+    btnCloseModal.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        if(isScanning) {
+            html5QrCode.resume();
+        }
     });
-    const data = await res.json();
-    if (data.ok) { 
-      state.user = data.name; 
-      localStorage.setItem('h_user_name', data.name); 
-      checkAuth(); 
-    } else { 
-      alert("Error Google: " + (data.error || "Datos incorrectos")); 
+
+    btnCopy.addEventListener('click', () => {
+        navigator.clipboard.writeText(resultText.textContent).then(() => {
+            const originalText = btnCopy.innerHTML;
+            btnCopy.innerHTML = '<ion-icon name="checkmark-outline"></ion-icon> Copied!';
+            setTimeout(() => btnCopy.innerHTML = originalText, 2000);
+        });
+    });
+});
+
+function switchView(targetId) {
+    views.forEach(view => {
+        if(view.id === targetId) {
+            view.classList.add('active');
+        } else {
+            view.classList.remove('active');
+        }
+    });
+    
+    // Stop scanner if switching away from scan view
+    if(targetId !== 'view-scan' && isScanning) {
+        stopScanner();
     }
-  } catch(error) { 
-    alert("FALLA TÉCNICA"); 
-  } finally {
-    btn.textContent = "Acceder"; btn.disabled = false;
-  }
 }
 
-function logout() { localStorage.removeItem('h_user_name'); location.reload(); }
-
-function selectBrand(b) { 
-  state.brand = b.dataset.brand; 
-  document.querySelectorAll('.brand-btn').forEach(btn => btn.classList.remove('active')); 
-  b.classList.add('active'); 
-  const menu = document.getElementById('dropdown-menu');
-  if(menu) menu.innerHTML = TIENDAS_POR_MARCA[state.brand].map(t => `<button class="drop-option" onclick="selectLocation('${t}')">${t}</button>`).join('');
-  state.location = ''; 
-  const lbl = document.getElementById('dropdown-label');
-  if(lbl) lbl.textContent = "Seleccionar..."; 
-  checkReady(); 
-}
-
-function selectMode(b) { 
-  state.mode = b.dataset.mode; 
-  document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active')); 
-  b.classList.add('active'); 
-  checkReady(); 
-}
-
-function toggleDropdown() { if(state.brand) document.getElementById('dropdown-menu').classList.toggle('show'); }
-function selectLocation(l) { 
-  state.location = l; 
-  const lbl = document.getElementById('dropdown-label'); if(lbl) lbl.textContent = l; 
-  const menu = document.getElementById('dropdown-menu'); if(menu) menu.classList.remove('show'); 
-  checkReady(); 
-}
-function checkReady() { const b = document.getElementById('btn-start'); if(b) b.disabled = !(state.brand && state.mode && state.location); }
-
-function handleStart() { if (state.mode === 'inventario') startInventario(); else startPedido(); }
-
-async function initScanner(id, cb) {
-  await stopScanner();
-  const formats = [
-    Html5QrcodeSupportedFormats.EAN_13,
-    Html5QrcodeSupportedFormats.EAN_8,
-    Html5QrcodeSupportedFormats.UPC_A,
-    Html5QrcodeSupportedFormats.UPC_E,
-    Html5QrcodeSupportedFormats.CODE_128,
-    Html5QrcodeSupportedFormats.CODE_39,
-    Html5QrcodeSupportedFormats.ITF,
-    Html5QrcodeSupportedFormats.QR_CODE,
-  ];
-  html5QrScanner = new Html5Qrcode(id, { formatsToSupport: formats, verbose: false });
-
-  const config = { fps: 10, qrbox: (w, h) => ({ width: Math.floor(w * 0.85), height: Math.floor(h * 0.4) }) };
-  const onScan = (txt) => {
-    const now = Date.now();
-    if (now - lastScanTime > 1500) { lastScanTime = now; cb(txt); }
-  };
-
-  try {
-    const cameras = await Html5Qrcode.getCameras();
-    if (!cameras || cameras.length === 0) { alert("No se encontraron camaras"); return; }
-    // Buscar trasera por label, si no tomar la ultima (suele ser trasera)
-    const back = cameras.find(c => /back|rear|environment|trasera/i.test(c.label)) || cameras[cameras.length - 1];
-    await html5QrScanner.start(back.id, config, onScan, () => {});
-  } catch (err) {
-    alert("Error al iniciar camara: " + err);
-  }
-}
-
-// Nueva función para enfocar manualmente
-async function setManualFocus(distance) {
-  if (!html5QrScanner) return;
-  try {
-    const stream = await html5QrScanner.getRunningTrackSettings();
-    if (stream && stream.focusDistance !== undefined) {
-      // Intentar establecer distancia de enfoque si el dispositivo lo soporta
-      const track = html5QrScanner.getRunningTrackSettings();
-      if (track) {
-        const constraints = { advanced: [{ focusDistance: distance }] };
-        // Esta es una operación experimental
-        console.log("Ajustando enfoque a:", distance);
-      }
+async function startScanner() {
+    if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
     }
-  } catch(e) {
-    console.log("Enfoque manual no soportado en este dispositivo");
-  }
+
+    const config = {
+        fps: 30, // High frame rate for native feel
+        qrbox: { width: 250, height: 250 }, // Matches CSS viewfinder
+        aspectRatio: 1.0,
+        disableFlip: false,
+        formatsToSupport: [
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.UPC_A
+        ]
+    };
+
+    try {
+        await html5QrCode.start(
+            { facingMode: "environment" }, 
+            config,
+            onScanSuccess,
+            onScanFailure
+        );
+        isScanning = true;
+        btnStartScan.classList.add('hidden');
+        btnStopScan.classList.remove('hidden');
+        
+        // Hide overlay initially to show the viewfinder cleanly
+        document.querySelector('.instruction-toast').style.display = 'none';
+    } catch (err) {
+        console.error("Error starting scanner", err);
+        alert("Camera access denied or error starting scanner. " + err);
+    }
 }
 
 async function stopScanner() {
-  if (html5QrScanner) { try { await html5QrScanner.stop(); html5QrScanner = null; } catch(e) {} }
-}
-
-async function sendInventario(code, manualQty) {
-  let qty = manualQty;
-  if (!qty) {
-    const qtyInput = document.getElementById('scan-qty');
-    qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
-  }
-  try {
-    const res = await fetch(scriptUrl, {
-      method: 'POST',
-      body: JSON.stringify({ 
-        tipo: 'inventario', 
-        marca: state.brand, 
-        usuario: state.user, 
-        ubicacion: state.location, 
-        codigo: code, 
-        cantidad: qty,
-        fecha: new Date().toLocaleDateString(), 
-        hora: new Date().toLocaleTimeString() 
-      })
-    });
-    const data = await res.json();
-    if (data.ok) {
-        state.sessionCount += qty; 
-        document.getElementById('counter-num').textContent = state.sessionCount;
-        document.getElementById('lsb-name').style.color = "#000";
-        document.getElementById('lsb-name').textContent = "✓ ("+qty+") " + data.descripcion;
-        document.getElementById('lsb-code').textContent = code;
-        showSuccessFeedback();
-    } else {
-        document.getElementById('lsb-name').style.color = "red";
-        document.getElementById('lsb-name').textContent = "❌ " + data.error;
-        document.getElementById('lsb-code').textContent = code;
-        if (navigator.vibrate) navigator.vibrate([100,50,100]);
+    if (html5QrCode && isScanning) {
+        try {
+            await html5QrCode.stop();
+            isScanning = false;
+            btnStartScan.classList.remove('hidden');
+            btnStopScan.classList.add('hidden');
+            document.querySelector('.instruction-toast').style.display = 'block';
+        } catch (err) {
+            console.error("Error stopping scanner", err);
+        }
     }
-  } catch(e) { alert("ERROR DE CONEXIÓN"); }
 }
 
-function startInventario() {
-  const el = document.getElementById('meta-loc'); if(el) el.textContent = state.location; 
-  showScreen('screen-scanner');
-  initScanner("qr-reader", (code) => { sendInventario(code); });
+function onScanSuccess(decodedText, decodedResult) {
+    // Vibrate device if supported
+    if (navigator.vibrate) {
+        navigator.vibrate(50);
+    }
+
+    // Pause scanner so it doesn't keep scanning the same code
+    if(html5QrCode.getState() === Html5QrcodeScannerState.SCANNING) {
+        html5QrCode.pause();
+    }
+
+    // Show Result
+    resultText.textContent = decodedText;
+    modal.classList.remove('hidden');
+
+    // Save to history
+    saveToHistory(decodedText, decodedResult.result.format?.formatName || 'Barcode');
 }
 
-async function startPedido() {
-  const el = document.getElementById('pedido-title'); if(el) el.textContent = state.location; 
-  showScreen('screen-pedido');
-  try {
-    const res = await fetch(`${scriptUrl}?action=getPedido&marca=${encodeURIComponent(state.brand)}&destino=${encodeURIComponent(state.location)}`);
-    const data = await res.json();
-    if(data.ok) { pedidoItems = data.items; renderPedidoList(); }
-  } catch(e) { alert("ERROR DE CARGA"); }
+function onScanFailure(error) {
+    // handle scan failure, usually better to ignore and keep scanning
+    // console.warn(`Code scan error = ${error}`);
 }
 
-function renderPedidoList() {
-  const list = document.getElementById('pedido-list'); if(!list) return;
-  const tot = pedidoItems.reduce((a, i) => a + i.pedida, 0); 
-  const dn = pedidoItems.reduce((a, i) => a + i.confirmada, 0);
-  const prg = document.getElementById('pedido-progress-fill');
-  if (tot > 0 && prg) prg.style.width = (dn/tot*100) + '%';
-  list.innerHTML = pedidoItems.map(item => {
-    const isComplete = item.pedida > 0 && item.confirmada >= item.pedida;
-    return `
-    <div class="pedido-card ${isComplete ? 'complete' : ''}">
-      <div>
-        <div style="font-weight:800; font-size:16px;">${item.descripcion}</div>
-        <div style="color:#8e8e93; font-family:monospace; font-size:12px;">${item.codigo}</div>
-      </div>
-      <div style="font-size:20px; font-weight:900;">${item.confirmada}/${item.pedida}</div>
-    </div>`;
-  }).join('');
+function saveToHistory(text, format) {
+    // Avoid immediate duplicates
+    if(history.length > 0 && history[0].text === text) return;
+
+    const newItem = {
+        text: text,
+        format: format,
+        timestamp: new Date().toISOString()
+    };
+
+    history.unshift(newItem);
+    if(history.length > 50) history.pop(); // keep last 50
+    
+    localStorage.setItem('scannerHistory', JSON.stringify(history));
+    renderHistory();
 }
 
-function processScan(code) {
-  const item = pedidoItems.find(i => i.codigo == code);
-  const res = document.getElementById('pedido-scan-result');
-  if (item && item.confirmada < item.pedida) {
-    item.confirmada++; renderPedidoList(); showSuccessFeedback();
-    fetch(scriptUrl, { method: 'POST', body: JSON.stringify({ tipo: 'pedido', marca: state.brand, location: state.location, rowIndex: item.rowIndex }) });
-    if(res) { res.style.color = "#34c759"; res.textContent = "✓ " + item.descripcion; }
-  } else if(res) {
-    res.style.color = "#ff3b30"; res.textContent = "Código: " + code + (item ? " (Ya completo)" : " (No en lista)");
-    if (navigator.vibrate) navigator.vibrate([100,50,100]);
-  }
+function renderHistory() {
+    if (history.length === 0) {
+        historyList.innerHTML = '<div class="empty-state" style="text-align:center; padding: 40px; color: var(--text-secondary);">No recent scans.</div>';
+        return;
+    }
+
+    historyList.innerHTML = history.map(item => {
+        const date = new Date(item.timestamp);
+        const timeString = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        const dateString = date.toLocaleDateString();
+        return `
+            <li class="history-item">
+                <div>
+                    <div class="history-text">${item.text}</div>
+                    <div class="history-date">${item.format} • ${dateString} ${timeString}</div>
+                </div>
+                <ion-icon name="copy-outline" style="color: var(--primary-color); cursor: pointer;" onclick="navigator.clipboard.writeText('${item.text}')"></ion-icon>
+            </li>
+        `;
+    }).join('');
 }
-
-function openPedidoScanner() { showScreen('pedido-scanner-overlay'); initScanner("qr-reader-pedido", processScan); }
-async function closePedidoScanner() { await stopScanner(); showScreen('screen-pedido'); }
-function endSession() { stopScanner().then(() => location.reload()); }
-
-function submitManual() {
-  const codeEl = document.getElementById('manual-code');
-  const qtyEl = document.getElementById('manual-qty');
-  const code = codeEl ? codeEl.value.trim() : ""; 
-  const qty = qtyEl ? parseInt(qtyEl.value) || 1 : 1;
-  if(!code) return;
-  if (document.getElementById('screen-pedido').classList.contains('active') || document.getElementById('pedido-scanner-overlay').classList.contains('active')) {
-    processScan(code); 
-  } else {
-    sendInventario(code, qty);
-  }
-  if(codeEl) codeEl.value = ""; 
-  if(qtyEl) qtyEl.value = "1";
-  hideModal('modal-manual');
-}
-
-document.addEventListener('DOMContentLoaded', checkAuth);
