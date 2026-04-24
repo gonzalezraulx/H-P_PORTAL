@@ -76,16 +76,23 @@ async function startScanner() {
 
     const config = {
         fps: 30, // High frame rate for native feel
-        qrbox: { width: 250, height: 250 }, // Matches CSS viewfinder
+        qrbox: { width: 300, height: 150 }, // Rectangular box for 1D barcodes
         aspectRatio: 1.0,
         disableFlip: false,
+        useBarCodeDetectorIfSupported: true, // Native hardware acceleration
         formatsToSupport: [
-            Html5QrcodeSupportedFormats.QR_CODE,
-            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.CODE_39,
             Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.UPC_A
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.ITF,
+            Html5QrcodeSupportedFormats.QR_CODE
         ]
     };
+
+
 
     try {
         await html5QrCode.start(
